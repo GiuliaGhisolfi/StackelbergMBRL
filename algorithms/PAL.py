@@ -1,4 +1,5 @@
 from utils import executing_policy
+from spinup.algos.tf1.trpo import trpo
 
 # PAL: Policy As Leader Algorithm
 def PAL(self, policy, model, env, n_episodes_per_iteration, alpha):
@@ -13,13 +14,9 @@ def PAL(self, policy, model, env, n_episodes_per_iteration, alpha):
     model = optimize_model(model, policy, data_buffer)
 
     # improve policy (TRPO)
-    policy = TRPO(policy, model, alpha)
+    policy = trpo(policy, model, alpha) #TODO: cambiare, vuole solo env con lo standard di OpenAI come input
 
     return policy, model
-
-def TRPO(policy, model, alpha):
-    # improve policy using TRPO
-    return policy
 
 def optimize_model(model, policy, data_buffer):
     # build model given data_buffer
