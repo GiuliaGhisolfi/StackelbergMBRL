@@ -5,7 +5,11 @@ Policy optimization is performed via TRPO algorithm from OpenAI SpinningUp:
 git clone https://github.com/openai/spinningup
 ```
 
-Environment: satisfy the OpenAI Gym API.
+Environment: satisfy the OpenAI Gym API (Gymnasium.gymnasium.Env)
+Gymnasium:
+```
+git clone https://github.com/Farama-Foundation/Gymnasium
+```
 
 In order to execute gym examples: 
 ```
