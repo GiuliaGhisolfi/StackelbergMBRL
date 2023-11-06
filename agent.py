@@ -6,15 +6,15 @@ class Agent:
         self.current_action = None
         pass
 
-class Model(Agent):
+class ModelAgent(Agent):
 
-    def __init__(self, env):
+    def __init__(self, env, gamma):
         super().__init__(env)
         self.action_space = None # to update during training
         self.state_space = None # discrete, from maze class
         self.transition_matrix = None
         self.reward = None
-        self.gamma = None # discount factor
+        self.gamma = gamma # discount factor
         pass
 
     def reward_function(self, state, action):
@@ -23,7 +23,7 @@ class Model(Agent):
     def transition_function(self, state, action):
         pass
 
-class Policy(Agent):
+class PolicyAgent(Agent):
 
     def __init__(self, env):
         super().__init__(env)
