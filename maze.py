@@ -233,6 +233,10 @@ if __name__ == '__main__':
         running = maze.running
         pausing = maze.running
         while pausing:
+            """print('Maze: ')
+            print(maze.blocks)
+            print('Walls: ')
+            print(maze.walls)"""
             event = pygame.event.wait()  # wait for user input, yielding to other prcesses
             if event.type == pygame.QUIT:
                 pausing = False

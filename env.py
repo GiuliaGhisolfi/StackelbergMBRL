@@ -1,3 +1,16 @@
+import numpy as np
 import gymnasium as gym
 import matrix_mdp
-env = gym.make('matrix_mdp/MatrixMDP-v0')
+
+n_states = 4
+n_actions = 2
+p_0 = np.ones((n_states, )) / n_states
+r = np.ones((n_states, n_states, n_actions))
+p = np.ones((n_states, n_states, n_actions)) / n_states
+
+env = gym.make('matrix_mdp/MatrixMDP-v0', p_0=p_0, p=p, r=r, render_mode="human")
+env.reset() # reset the environment to the initial state (mandatory before take an action)
+for i in range(10):
+    #env.render()
+    env.step(1)
+    print(env.state)
