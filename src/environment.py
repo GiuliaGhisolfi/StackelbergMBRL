@@ -33,34 +33,36 @@ class Environment(MatrixMDPEnv):
         print('Compute reward function')
         self.compute_reward_function()
 
-        #super().__init__(p_0=self.p_0, p=self.p, r=self.r, render_mode='human')
+        super().__init__(p_0=self.p_0, p=self.p, r=self.r, render_mode='human')
         print('Environment created')
     
     def compute_initial_states(self):
         self.terminal_state_coord = self.coordinates_from_state(self.terminal_state)
 
-        if self.terminal_state_coord[0] <= self.maze_width/2: 
-            x = 1
-            up = True
+        if self.terminal_state_coord[0] > self.maze_width/2: 
+            x_inital_state = 1
+            initial_state_up = True
         else: 
-            x = self.maze_width-2
-            up = False
+            x_inital_state = self.maze_width-2
+            initial_state_up = False
 
-        if self.terminal_state_coord[1] <= self.maze_height/2: 
-            y = 1
-            left = True
+        if self.terminal_state_coord[1] > self.maze_height/2: 
+            y_initial_state = 1
+            initial_state_left = True
         else: 
-            y = self.maze_height-2
-            left = False
+            y_initial_state = self.maze_height-2
+            initial_state_left = False
 
-        while self.maze[y,x]:
-            if up: x += 1
-            else: x -= 1
-            if left: y += 1
-            else: y -= 1
+        while self.maze[y_initial_state,x_inital_state]:
+            if initial_state_up: 
+                x_inital_state += 1
+            else: x_inital_state -= 1
+            if initial_state_left: 
+                y_initial_state += 1
+            else: y_initial_state -= 1
 
-        self.initial_state = self.state_from_coordinates(x, y)
-        self.initial_state_coord = (x, y)
+        self.initial_state = self.state_from_coordinates(x_inital_state, y_initial_state)
+        self.initial_state_coord = (x_inital_state, y_initial_state)
     
     def compute_terminal_states(self):
         self.n_states =  np.sum(self.flatten_maze == 0) # states cardinality: walkable cells
@@ -76,7 +78,7 @@ class Environment(MatrixMDPEnv):
     
     def compute_transition_distribuition(self):
         # compute transition probability matrix given to the environment P(S'|S,A)
-        self.p = np.ones((self.n_states, self.n_states, self.n_actions)) / self.n_states # init
+        self.p = np.zeros((self.n_states, self.n_states, self.n_actions)) # init
 
         for state in range(self.n_states):
             x, y = self.coordinates_from_state(state)
@@ -84,14 +86,14 @@ class Environment(MatrixMDPEnv):
             # compute neighbors: state agent can go from current state in (x,y)
             neighbors_coord = [(y-1, x), (y+1, x), (y, x-1), (y, x+1)] # up, down, left, right
             neighbors = [self.maze[coord] for coord in neighbors_coord]
-            den = np.sum(neighbors)
+            #den = self.n_actions - np.sum(neighbors)
 
             # compute probability to transited to neighbors from current state in (x,y)
             for neighbor, (y_neighbor, x_neighbor), action in zip(neighbors, neighbors_coord, [0, 1, 2, 3]):
                 # action: [0, 1, 2, 3] -> [up, down, left, right]
                 if neighbor == 0:
                     neighbor_state = self.state_from_coordinates(x_neighbor, y_neighbor)
-                    self.p[neighbor_state, state, action] = 1/den
+                    self.p[neighbor_state, state, action] = 1
             
         # set the translation probability from the terminal state to zero
         self.p[:, self.terminal_state, :] = np.zeros((self.n_states, self.n_actions))
