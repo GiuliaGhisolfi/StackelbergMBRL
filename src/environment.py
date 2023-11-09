@@ -19,8 +19,9 @@ class Environment(MatrixMDPEnv):
         self.maze = maze.blocks
         self.flatten_maze = maze.blocks.flatten().reshape(1, -1)
 
-        # initialize initial state
-        print('Compute initial state')
+        # initialize initial and terminal state
+        print('Compute initial and terminal state')
+        self.compute_terminal_states()
         self.compute_initial_states()
 
         # compute prior and transitional distribuitions
@@ -28,23 +29,45 @@ class Environment(MatrixMDPEnv):
         self.compute_prior_distribuitions()
         self.compute_transition_distribuition()
 
-        # initialize terminal state translation probability
-        print('Compute terminal state')
-        self.compute_terminal_states()
-
         # compute reward function
         print('Compute reward function')
         self.compute_reward_function()
 
-        super.__init__(p_0=self.p_0, p=self.p, r=self.r, render_mode='human')
+        #super().__init__(p_0=self.p_0, p=self.p, r=self.r, render_mode='human')
         print('Environment created')
     
     def compute_initial_states(self):
+        self.terminal_state_coord = self.coordinates_from_state(self.terminal_state)
+
+        if self.terminal_state_coord[0] <= self.maze_width/2: 
+            x = 1
+            up = True
+        else: 
+            x = self.maze_width-2
+            up = False
+
+        if self.terminal_state_coord[1] <= self.maze_height/2: 
+            y = 1
+            left = True
+        else: 
+            y = self.maze_height-2
+            left = False
+
+        while self.maze[y,x]:
+            if up: x += 1
+            else: x -= 1
+            if left: y += 1
+            else: y -= 1
+
+        self.initial_state = self.state_from_coordinates(x, y)
+        self.initial_state_coord = (x, y)
+    
+    def compute_terminal_states(self):
         self.n_states =  np.sum(self.flatten_maze == 0) # states cardinality: walkable cells
         self.n_actions = 4 # actions cardinality: up, down, left, right
 
         # sampling initial state from a uniform distribution over all possible states
-        self.initial_state = np.random.choice(np.arange(self.n_states))
+        self.terminal_state = np.random.choice(np.arange(self.n_states))
  
     def compute_prior_distribuitions(self):
         # compute prior distribuition w.r.t. initial state
@@ -52,10 +75,8 @@ class Environment(MatrixMDPEnv):
         self.p_0[self.initial_state] = 1
     
     def compute_transition_distribuition(self):
-        #TODO: si può scrivere meglio?
         # compute transition probability matrix given to the environment P(S'|S,A)
         self.p = np.ones((self.n_states, self.n_states, self.n_actions)) / self.n_states # init
-        actions_list = [0, 1, 2, 3] # up, down, left, right
 
         for state in range(self.n_states):
             x, y = self.coordinates_from_state(state)
@@ -66,27 +87,12 @@ class Environment(MatrixMDPEnv):
             den = np.sum(neighbors)
 
             # compute probability to transited to neighbors from current state in (x,y)
-            for neighbor, (y_neighbor, x_neighbor), action in zip(neighbors, neighbors_coord, actions_list):
+            for neighbor, (y_neighbor, x_neighbor), action in zip(neighbors, neighbors_coord, [0, 1, 2, 3]):
+                # action: [0, 1, 2, 3] -> [up, down, left, right]
                 if neighbor == 0:
                     neighbor_state = self.state_from_coordinates(x_neighbor, y_neighbor)
                     self.p[neighbor_state, state, action] = 1/den
-        
-    def compute_terminal_states(self):
-        initial_state_coord = self.coordinates_from_state(self.initial_state)
-        manhattan_distance = -1 # init
-        threshold_initial_terminal_distance = THRESHOLD_INITIAL_TERMINAL_DISTANCE_PERCENTAGE * self.n_states
-
-        while manhattan_distance < threshold_initial_terminal_distance:
-            # sampling terminal state from a uniform distribution over all possible states
-            self.terminal_state = np.random.choice(np.arange(self.n_states)) 
-            #TODO: si può fare meglio, magari cambiando il sampling dello stato iniziale e cercando di non averlo nel centro
-
-            # convert state in gridword coordinates
-            terminal_state_coord = self.coordinates_from_state(self.terminal_state)
-
-            # calculate Manhattan distance between inital and terminal states
-            manhattan_distance = cityblock(initial_state_coord, terminal_state_coord)
-
+            
         # set the translation probability from the terminal state to zero
         self.p[:, self.terminal_state, :] = np.zeros((self.n_states, self.n_actions))
     
