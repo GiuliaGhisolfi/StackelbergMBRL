@@ -26,6 +26,9 @@ class Maze:
         self.block_size = np.array([size_y * 2 + 1, size_x * 2 + 1], dtype=np.int64)
         self.blocks = np.ones((self.block_size[0], self.block_size[1]), dtype=np.byte)
 
+        # generate walls
+        self.gen_maze_2D()
+
     def gen_maze_walls(self, corridor_len=999):
 
         # Generate a maze.

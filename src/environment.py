@@ -1,7 +1,8 @@
 import numpy as np
-import pygame
+import matplotlib.pyplot as plt
+from matplotlib.pyplot import spy
 
-from matrix_mdp import MatrixMDPEnv
+from matrix_mdp.envs import MatrixMDPEnv
 from src.maze import Maze
 from scipy.spatial.distance import cityblock
 
@@ -19,19 +20,24 @@ class Environment(MatrixMDPEnv):
         self.flatten_maze = maze.blocks.flatten().reshape(1, -1)
 
         # initialize initial state
+        print('Compute initial state')
         self.compute_initial_states()
 
         # compute prior and transitional distribuitions
+        print('Compute prior and transitional distribuitions')
         self.compute_prior_distribuitions()
         self.compute_transition_distribuition()
 
         # initialize terminal state translation probability
+        print('Compute terminal state')
         self.compute_terminal_states()
 
         # compute reward function
+        print('Compute reward function')
         self.compute_reward_function()
 
         super.__init__(p_0=self.p_0, p=self.p, r=self.r, render_mode='human')
+        print('Environment created')
     
     def compute_initial_states(self):
         self.n_states =  np.sum(self.flatten_maze == 0) # states cardinality: walkable cells
@@ -46,29 +52,24 @@ class Environment(MatrixMDPEnv):
         self.p_0[self.initial_state] = 1
     
     def compute_transition_distribuition(self):
+        #TODO: si può scrivere meglio?
         # compute transition probability matrix given to the environment P(S'|S,A)
         self.p = np.ones((self.n_states, self.n_states, self.n_actions)) / self.n_states # init
-        current_state = 0 # sequential number associated to each states
-            
-        for y in range(1, self.maze_height):
-            for x in range(1, self.maze_width):
-                temp_p_matrix = np.zeros((self.maze_width*self.maze_height, self.n_actions)) # init
+        actions_list = [0, 1, 2, 3] # up, down, left, right
 
-                # compute neighbors: state agent can go from current state in (x,y)
-                neighbors_coord = [(x, y-1), (x, y+1), (x-1, y), (x+1, y)] # up, down, left, right
-                neighbors = [self.maze[coord] for coord in neighbors_coord]
-                den = np.sum(neighbors)
+        for state in range(self.n_states):
+            x, y = self.coordinates_from_state(state)
 
-                # compute probability to transited to neighbors from current state in (x,y)
-                for neighbor, x_neighbor, y_neighbor in zip(neighbors, neighbors_coord):
-                    temp_p_matrix[x_neighbor + self.maze_width * y_neighbor] = 1/den if neighbor==0 else 0
+            # compute neighbors: state agent can go from current state in (x,y)
+            neighbors_coord = [(y-1, x), (y+1, x), (y, x-1), (y, x+1)] # up, down, left, right
+            neighbors = [self.maze[coord] for coord in neighbors_coord]
+            den = np.sum(neighbors)
 
-                # drop value not associates with a state
-                temp_p_matrix = temp_p_matrix[np.nonzero(temp_p_matrix)]
-
-                # add to transition probability matrix
-                self.p[:, current_state, :] = temp_p_matrix
-                current_state += 1
+            # compute probability to transited to neighbors from current state in (x,y)
+            for neighbor, (y_neighbor, x_neighbor), action in zip(neighbors, neighbors_coord, actions_list):
+                if neighbor == 0:
+                    neighbor_state = self.state_from_coordinates(x_neighbor, y_neighbor)
+                    self.p[neighbor_state, state, action] = 1/den
         
     def compute_terminal_states(self):
         initial_state_coord = self.coordinates_from_state(self.initial_state)
@@ -116,5 +117,12 @@ class Environment(MatrixMDPEnv):
         temporary = np.zeros(self.flatten_maze.shape)
         temporary[0, x + self.maze_width * y] = 1
         temporary = temporary[np.where(self.flatten_maze == 0)]
-        
+
         return np.where(temporary==1)[0][0]
+    
+    def display_maze(self):
+        plt.figure(figsize=(10, 10))
+        spy(self.maze)
+        plt.xticks(np.arange(0, self.maze.shape[1], 2))
+        plt.yticks(np.arange(0, self.maze.shape[0], 2))
+        plt.grid(axis='both', which='both')
