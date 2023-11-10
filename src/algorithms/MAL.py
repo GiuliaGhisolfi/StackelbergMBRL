@@ -7,7 +7,7 @@ def MAL(policy, model, env, n_episodes_per_iteration, alpha):
     policy = optimize_policy(policy, model)
 
     # collect data executing optimized policy in the environment
-    for iteration in range(n_episodes_per_iteration):
+    for _ in range(n_episodes_per_iteration):
         episode = executing_policy(policy, env)
         data_buffer.append(episode)
     

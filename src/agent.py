@@ -1,11 +1,14 @@
 import numpy as np
 
-class ModelAgent():
+N_ACTIONS = 4
+ACTIONS_LIST = [0, 1, 2, 3] # [up, down, left, right]
 
-    def __init__(self):
+class ModelAgent():
+    def __init__(self, initial_state_coord, transition_matrix_initial_state):
         self.model_action_space = [0, 1, 2, 3] # [up, down, left, right]
         self.model_state_space = dict() # discrete: {(x,y): [possible actions]}
-        pass
+
+        self.update_model_space(initial_state_coord, transition_matrix_initial_state)
 
     def transition_function(self, state, action):
         #return next_state
@@ -26,20 +29,24 @@ class ModelAgent():
 
 
 class PolicyAgent():
-
-    def __init__(self, gamma):
+    def __init__(self, gamma, initial_state_coord, actions_list_initial_state):
         self.gamma = gamma # discount factor
+        self.initial_state = initial_state_coord
+        self.initialize_policy(initial_state_coord, actions_list_initial_state)
     
-    def initialize_policy(self, initial_state):
-        #return policy
-        pass
+    def initialize_policy(self, initial_state, actions_list_initial_state):
+        self.policy = dict() # {(x,y): [action's probability]}
+
+        actions_probability_list = np.zeros(N_ACTIONS)
+        actions_probability_list[actions_list_initial_state] = 1/len(actions_list_initial_state)
+
+        self.policy[initial_state] = actions_probability_list
     
     def take_action(self, state):
-        #return action
-        pass
+        return np.random.choice(ACTIONS_LIST, self.policy[state])
 
     def update_policy(self, state):
-        # update policy
+        # update self.policy
         pass
     
     def reward_function(self, state, action, next_state):

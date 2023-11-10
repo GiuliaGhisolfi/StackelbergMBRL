@@ -27,6 +27,7 @@ def executing_policy(policy, env):
 def select_action(policy, env, current_state):
     if current_state in policy:
         current_state_coord = env.coordinates_from_state(current_state)
+        #TODO: se si passa policy agent c'è metodo take_action(state) per fare questa cosa
         return np.random.choice(ACTIONS_LIST, policy[current_state_coord])
     else:
         # possible actions from current state

@@ -6,7 +6,7 @@ def PAL(policy, model, env, n_episodes_per_iteration, alpha):
     data_buffer = [] # list of tuples (state, action, reward, next_state)
 
     # collect data executing policy in the environment
-    for iteration in range(n_episodes_per_iteration):
+    for _ in range(n_episodes_per_iteration):
         episode = executing_policy(policy, env)
         data_buffer.append(episode)
     
