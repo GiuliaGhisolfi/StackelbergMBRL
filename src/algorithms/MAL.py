@@ -1,14 +1,14 @@
 from utils import executing_policy
 
 # MAL: Model As Leader Algorithm
-def MAL(self, policy, model, env, n_episodes_per_iteration, alpha):
+def MAL(policy, model, env, n_episodes_per_iteration, alpha):
     data_buffer = []
     # optimize policy massimizing reward given the model
     policy = optimize_policy(policy, model)
 
     # collect data executing optimized policy in the environment
     for iteration in range(n_episodes_per_iteration):
-        episode = executing_policy(self, policy, env)
+        episode = executing_policy(policy, env)
         data_buffer.append(episode)
     
     # improve model (Gradient Descent o altro)

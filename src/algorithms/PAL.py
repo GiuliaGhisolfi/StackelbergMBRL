@@ -2,7 +2,7 @@ from utils import executing_policy
 from spinningup.spinup.algos.tf1.trpo import trpo
 
 # PAL: Policy As Leader Algorithm
-def PAL(self, policy, model, env, n_episodes_per_iteration, alpha):
+def PAL(policy, model, env, n_episodes_per_iteration, alpha):
     data_buffer = [] # list of tuples (state, action, reward, next_state)
 
     # collect data executing policy in the environment
