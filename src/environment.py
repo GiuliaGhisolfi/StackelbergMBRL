@@ -4,9 +4,6 @@ from matplotlib.pyplot import spy
 
 from matrix_mdp.envs import MatrixMDPEnv
 from src.maze import Maze
-from scipy.spatial.distance import cityblock
-
-THRESHOLD_INITIAL_TERMINAL_DISTANCE_PERCENTAGE = 0.5 # TODO: da cambiare o mettere come parametro
 
 class Environment(MatrixMDPEnv):
     
@@ -86,7 +83,6 @@ class Environment(MatrixMDPEnv):
             # compute neighbors: state agent can go from current state in (x,y)
             neighbors_coord = [(y-1, x), (y+1, x), (y, x-1), (y, x+1)] # up, down, left, right
             neighbors = [self.maze[coord] for coord in neighbors_coord]
-            #den = self.n_actions - np.sum(neighbors)
 
             # compute probability to transited to neighbors from current state in (x,y)
             for neighbor, (y_neighbor, x_neighbor), action in zip(neighbors, neighbors_coord, [0, 1, 2, 3]):
