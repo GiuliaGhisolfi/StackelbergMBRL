@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import spy
+import pygame
 
 from matrix_mdp.envs import MatrixMDPEnv
 from src.maze import Maze
@@ -10,6 +11,7 @@ class Environment(MatrixMDPEnv):
     def __init__(self, maze_width, maze_height):
         self.maze_width = maze_width
         self.maze_height =  maze_height
+        self.window = None
 
         # initializa maze
         maze = Maze(size_x=int(self.maze_width/2), size_y=int(self.maze_height/2))
@@ -130,3 +132,49 @@ class Environment(MatrixMDPEnv):
         plt.xticks(np.arange(0, self.maze.shape[1], 2))
         plt.yticks(np.arange(0, self.maze.shape[0], 2))
         plt.grid(axis='both', which='both')
+    
+    def render(self):
+        if self.window is None:
+            # init pygame
+            pygame.init()
+            pygame.display.init()
+            self.window = pygame.display.set_mode(
+                (self.maze_width*20, self.maze_height*20)
+            )
+        
+        # draw maze
+        self.window.fill((255, 255, 255))
+        pix_square_size = 20
+        for x in range(self.maze_width):
+            for y in range(self.maze_height):
+                if self.maze[y, x]:
+                    pygame.draw.rect(
+                        self.window,
+                        (0, 0, 0),
+                        pygame.Rect(
+                            pix_square_size * x,
+                            pix_square_size * y,
+                            pix_square_size,
+                            pix_square_size,
+                        ),
+                    )
+        
+        # draw terminal state
+        def drawX(x,y):
+            pygame.draw.lines(self.window, (255, 0, 0), True, [(x-10,y-10),(x+10,y+10)], 8)
+            pygame.draw.lines(self.window, (255, 0, 0), True, [(x-10,y+10),(x+10,y-10)], 8)
+        drawX(pix_square_size*self.terminal_state_coord[0]-10, pix_square_size*self.terminal_state_coord[1]+10)
+
+        # draw initial state
+        pygame.draw.rect(self.window, 
+            (0, 100, 255), 
+            pygame.Rect(
+                pix_square_size * self.initial_state_coord[0],
+                pix_square_size * self.initial_state_coord[1],
+                pix_square_size,
+                pix_square_size,
+            ),
+        )
+        
+        # display update
+        pygame.display.update()

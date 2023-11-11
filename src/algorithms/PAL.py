@@ -14,7 +14,8 @@ def PAL(policy, model, env, n_episodes_per_iteration, alpha):
     model = optimize_model(model, policy, data_buffer)
 
     # improve policy (TRPO)
-    policy = trpo(policy, model, alpha) #TODO: cambiare, vuole solo env con lo standard di OpenAI come input
+    #policy = trpo(policy, model, alpha) #TODO: cambiare, vuole solo env con lo standard di OpenAI come input
+    trpo(env) #FIXME: non lo so ma dovrebbe essere una funzione che copia l'enviroment, poi deve ritornare la policy
 
     return policy, model
 

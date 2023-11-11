@@ -1,8 +1,9 @@
-from environment import Environment
-from agent import ModelAgent, PolicyAgent
+from src.environment import Environment
+from src.agent import ModelAgent, PolicyAgent
 
 def main(maze_width, maze_height):
     env = Environment(maze_width, maze_height)
+    env.render()
 
 
 if __name__ == '__main__':
@@ -21,3 +22,5 @@ if __name__ == '__main__':
     k = 20 # number of episodes to run for each epoch
 
     data_buffer = [] # list of episodes, each episode is a list of tuples (state, action, reward, next_state)
+
+    main(maze_width, maze_height)
