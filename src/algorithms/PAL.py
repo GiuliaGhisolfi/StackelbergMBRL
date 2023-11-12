@@ -19,6 +19,7 @@ def PAL(policy, model, env, n_episodes_per_iteration, alpha):
 
     return policy, model
 
-def optimize_model(model, policy, data_buffer):
+def optimize_model(model, data_buffer):
     # build model given data_buffer
+    # minimizzo KL div tra modello precedente e approx del modello ricavata dai dati
     return model

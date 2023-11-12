@@ -103,5 +103,8 @@ class PolicyAgent():
         pass
     
     def reward_function(self, state, action, next_state):
+        #TODO: cambiare parametri in input e avere tutta la seguenza fino allo stato terminale (?)
+        T = 0 # T expected time to reach goal from state
+        cumulative_reward = sum([self.gamma**t * self.reward_function(state, action, next_state) for t in range(T)])
         #return cumulative_reward
         pass
