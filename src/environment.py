@@ -6,11 +6,26 @@ import pygame
 from matrix_mdp.envs import MatrixMDPEnv
 from src.maze import Maze
 
+SCREEN_WIDTH_MAX = 1920
+SCREEN_HEIGHT_MAX = 1080
+SCREEN_WIDTH = 800
+SCREEN_HEIGHT = 600
+
 class Environment(MatrixMDPEnv):
     
-    def __init__(self, maze_width, maze_height):
-        self.maze_width = maze_width
-        self.maze_height =  maze_height
+    def __init__(self, maze_width, maze_height, block_pixel_size=None):
+        self.maze_width = (int(maze_width) - 1) if (int(maze_width) % 2) else int(maze_width)
+        self.maze_height = (int(maze_height) - 1) if (int(maze_height) % 2) else int(maze_height)
+
+        # set block pixel size
+        if block_pixel_size is None:
+            self.block_pixel_size = int(max(SCREEN_WIDTH/self.maze_width, SCREEN_HEIGHT/self.maze_height))
+        elif (self.maze_width*block_pixel_size > SCREEN_WIDTH_MAX or 
+            self.maze_height*block_pixel_size > SCREEN_HEIGHT_MAX):
+            self.block_pixel_size = int(min(SCREEN_WIDTH_MAX/self.maze_width, SCREEN_HEIGHT_MAX/self.maze_height))
+        else:
+            self.block_pixel_size = block_pixel_size
+        # init pygame window
         self.window = None
 
         # initializa maze
@@ -139,12 +154,13 @@ class Environment(MatrixMDPEnv):
             pygame.init()
             pygame.display.init()
             self.window = pygame.display.set_mode(
-                (self.maze_width*20, self.maze_height*20)
+                (self.maze_width*self.block_pixel_size, 
+                 self.maze_height*self.block_pixel_size)
             )
         
         # draw maze
         self.window.fill((255, 255, 255))
-        pix_square_size = 20
+        self.block_pixel_size = 20
         for x in range(self.maze_width):
             for y in range(self.maze_height):
                 if self.maze[y, x]:
@@ -152,27 +168,42 @@ class Environment(MatrixMDPEnv):
                         self.window,
                         (0, 0, 0),
                         pygame.Rect(
-                            pix_square_size * x,
-                            pix_square_size * y,
-                            pix_square_size,
-                            pix_square_size,
+                            self.block_pixel_size * x,
+                            self.block_pixel_size * y,
+                            self.block_pixel_size,
+                            self.block_pixel_size,
                         ),
                     )
         
         # draw terminal state
         def drawX(x,y):
-            pygame.draw.lines(self.window, (255, 0, 0), True, [(x-10,y-10),(x+10,y+10)], 8)
-            pygame.draw.lines(self.window, (255, 0, 0), True, [(x-10,y+10),(x+10,y-10)], 8)
-        drawX(pix_square_size*self.terminal_state_coord[0]-10, pix_square_size*self.terminal_state_coord[1]+10)
+            pygame.draw.lines(
+                self.window, 
+                (255, 0, 0), 
+                True, 
+                [(x, y), 
+                (x + self.block_pixel_size-1, y + self.block_pixel_size-1)], 
+                int(self.block_pixel_size/2)
+            )
+            pygame.draw.lines(
+                self.window, 
+                (255, 0, 0), 
+                True, 
+                [(x, y + self.block_pixel_size-1),
+                (x + self.block_pixel_size-1, y)], 
+                int(self.block_pixel_size/2)
+            )
+        drawX(self.terminal_state_coord[0] * self.block_pixel_size, 
+            self.terminal_state_coord[1] * self.block_pixel_size)
 
         # draw initial state
         pygame.draw.rect(self.window, 
             (0, 100, 255), 
             pygame.Rect(
-                pix_square_size * self.initial_state_coord[0],
-                pix_square_size * self.initial_state_coord[1],
-                pix_square_size,
-                pix_square_size,
+                (self.block_pixel_size-3) * self.initial_state_coord[0],
+                (self.block_pixel_size-3) * self.initial_state_coord[1],
+                (self.block_pixel_size-3),
+                (self.block_pixel_size-3), #TODO: parametrizzare questo 3
             ),
         )
         

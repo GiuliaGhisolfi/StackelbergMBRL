@@ -1,7 +1,60 @@
 import numpy as np
+import pygame
 
 N_ACTIONS = 4
 ACTIONS_LIST = [0, 1, 2, 3] # [up, down, left, right]
+ACTION_MAP = {
+    0: 'up', 
+    1: 'down', 
+    2: 'left', 
+    3: 'right'
+}
+
+class Agent():
+    def __init__(self, initial_state_coord, transition_matrix_initial_state,
+            gamma, actions_list_initial_state):
+        self.model = ModelAgent(initial_state_coord, transition_matrix_initial_state)
+        self.policy = PolicyAgent(gamma, initial_state_coord, actions_list_initial_state)
+
+        self.initial_state = initial_state_coord
+        self.agent_state = initial_state_coord
+
+        self.path = [self.agent_state] # list of states visited by agent
+        self.line_path = [] # list of lines to draw path
+    
+    def render(self, window, block_pixel_size):
+        # draw agent
+        pygame.draw.rect(window, 
+            (0, 0, 255), 
+            pygame.Rect(
+                block_pixel_size * self.agent_state[0],
+                block_pixel_size * self.agent_state[1],
+                block_pixel_size,
+                block_pixel_size,
+            ),
+        )
+
+        # draw path
+        if block_pixel_size % 2:
+            line_width = 2
+        else: 
+            line_width = 3
+
+        self.line_path.append(
+            (self.path[-1][0] * block_pixel_size + int(block_pixel_size/2),
+            self.path[-1][1] * block_pixel_size + int(block_pixel_size/2))
+        )
+
+        if len(self.line_path) > 1:
+            for start_line, end_line in zip(self.line_path[:-1], self.line_path[1:]):
+                pygame.draw.lines(
+                    window,
+                    (255, 0, 0),
+                    False,
+                    [start_line, end_line],
+                    line_width
+                )
+
 
 class ModelAgent():
     def __init__(self, initial_state_coord, transition_matrix_initial_state):
