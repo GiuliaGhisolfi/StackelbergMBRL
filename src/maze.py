@@ -2,7 +2,7 @@ import numpy as np
 import random
 
 class Maze:
-    #TODO: da sistemare commenti + chiamate a pygame (?) o valutare se mettere la grafica da un altra parte
+    #TODO: da sistemare commenti + documentazione
     """
     Generate a maze See https://en.wikipedia.org/wiki/Maze_generation_algorithm
     Returns either

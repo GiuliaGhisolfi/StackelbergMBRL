@@ -3,7 +3,7 @@ import pygame
 
 N_ACTIONS = 4
 ACTIONS_LIST = [0, 1, 2, 3] # [up, down, left, right]
-ACTION_MAP = {
+ACTION_MAP = { #TODO: togliere o cambiare mappatura
     0: 'up', 
     1: 'down', 
     2: 'left', 
@@ -44,17 +44,17 @@ class Agent():
             (self.path[-1][0] * block_pixel_size + int(block_pixel_size/2),
             self.path[-1][1] * block_pixel_size + int(block_pixel_size/2))
         )
-
         if len(self.line_path) > 1:
-            for start_line, end_line in zip(self.line_path[:-1], self.line_path[1:]):
-                pygame.draw.lines(
-                    window,
-                    (255, 0, 0),
-                    False,
-                    [start_line, end_line],
-                    line_width
-                )
-
+            pygame.draw.lines(
+                window,
+                (0, 0, 0),
+                False,
+                self.line_path,
+                line_width
+            )
+        
+        # display update
+        pygame.display.update()
 
 class ModelAgent():
     def __init__(self, initial_state_coord, transition_matrix_initial_state):

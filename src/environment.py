@@ -14,8 +14,17 @@ SCREEN_HEIGHT = 600
 class Environment(MatrixMDPEnv):
     
     def __init__(self, maze_width, maze_height, block_pixel_size=None):
-        self.maze_width = (int(maze_width) - 1) if (int(maze_width) % 2) else int(maze_width)
-        self.maze_height = (int(maze_height) - 1) if (int(maze_height) % 2) else int(maze_height)
+        # initializa maze
+        print('Initialize maze')
+        maze = Maze(size_x=int(maze_width/2), size_y=int(maze_height/2))
+        
+        # maze parameters
+        self.maze_width = int(maze_width/2) * 2 + 1
+        self.maze_height = int(maze_height/2) * 2 + 1
+        self.maze = maze.blocks
+        self.flatten_maze = maze.blocks.flatten().reshape(1, -1)
+        print('Maze created')
+        print('Maze size: {}x{}'.format(self.maze_width, self.maze_height))
 
         # set block pixel size
         if block_pixel_size is None:
@@ -28,15 +37,11 @@ class Environment(MatrixMDPEnv):
         # init pygame window
         self.window = None
 
-        # initializa maze
-        maze = Maze(size_x=int(self.maze_width/2), size_y=int(self.maze_height/2))
-        self.maze = maze.blocks
-        self.flatten_maze = maze.blocks.flatten().reshape(1, -1)
-
         # initialize initial and terminal state
         print('Compute initial and terminal state')
         self.compute_terminal_states()
         self.compute_initial_states()
+        print('Initial state: {}'.format(self.initial_state_coord))
 
         # compute prior and transitional distribuitions
         print('Compute prior and transitional distribuitions')
@@ -154,10 +159,8 @@ class Environment(MatrixMDPEnv):
             pygame.init()
             pygame.display.init()
             self.window = pygame.display.set_mode(
-                (self.maze_width*self.block_pixel_size, 
-                 self.maze_height*self.block_pixel_size)
-            )
-        
+                (self.maze_width * self.block_pixel_size, self.maze_height * self.block_pixel_size)
+            ) #TODO: FIX SCREEN SIZE
         # draw maze
         self.window.fill((255, 255, 255))
         self.block_pixel_size = 20
@@ -176,34 +179,35 @@ class Environment(MatrixMDPEnv):
                     )
         
         # draw terminal state
+        line_width = int(self.block_pixel_size/5)
         def drawX(x,y):
             pygame.draw.lines(
                 self.window, 
                 (255, 0, 0), 
                 True, 
                 [(x, y), 
-                (x + self.block_pixel_size-1, y + self.block_pixel_size-1)], 
-                int(self.block_pixel_size/2)
+                (x + self.block_pixel_size - 1, y + self.block_pixel_size - 1)], 
+                line_width
             )
             pygame.draw.lines(
                 self.window, 
                 (255, 0, 0), 
                 True, 
-                [(x, y + self.block_pixel_size-1),
-                (x + self.block_pixel_size-1, y)], 
-                int(self.block_pixel_size/2)
+                [(x, y + self.block_pixel_size - 1),
+                (x + self.block_pixel_size - 1, y)], 
+                line_width
             )
         drawX(self.terminal_state_coord[0] * self.block_pixel_size, 
             self.terminal_state_coord[1] * self.block_pixel_size)
 
         # draw initial state
-        pygame.draw.rect(self.window, 
-            (0, 100, 255), 
+        pygame.draw.rect(self.window,
+            (0, 0, 0), 
             pygame.Rect(
-                (self.block_pixel_size-3) * self.initial_state_coord[0],
-                (self.block_pixel_size-3) * self.initial_state_coord[1],
-                (self.block_pixel_size-3),
-                (self.block_pixel_size-3), #TODO: parametrizzare questo 3
+                (self.block_pixel_size * self.initial_state_coord[0] + line_width),
+                (self.block_pixel_size * self.initial_state_coord[1] + line_width),
+                (self.block_pixel_size - 2 * line_width),
+                (self.block_pixel_size - 2 * line_width),
             ),
         )
         

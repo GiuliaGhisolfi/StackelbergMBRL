@@ -1,9 +1,22 @@
-from src.environment import Environment
-from src.agent import ModelAgent, PolicyAgent
+import numpy as np
 
-def main(maze_width, maze_height):
-    env = Environment(maze_width, maze_height)
+from src.environment import Environment
+from src.agent import Agent
+
+def main(maze_width, maze_height, gamma):
+    env = Environment(
+            maze_width=maze_width, 
+            maze_height=maze_height
+            )
+    agent = Agent(
+            initial_state_coord=env.initial_state_coord, 
+            transition_matrix_initial_state=env.p[:, env.initial_state, :],
+            gamma=gamma, 
+            actions_list_initial_state = np.where(env.p[:, env.initial_state, :] != 0)[1]
+            )
+    
     env.render()
+    agent.render(env.window, env.block_pixel_size)
 
 
 if __name__ == '__main__':
@@ -13,6 +26,7 @@ if __name__ == '__main__':
 
     # policy agent parameters
     alpha = 0.01 # learning rate for policy improvment
+    gamma = 0.9 # discount factor to compute expected cumulative reward
 
     # model agent parameters
     beta = 0.01 # learning rate for model update
@@ -23,4 +37,4 @@ if __name__ == '__main__':
 
     data_buffer = [] # list of episodes, each episode is a list of tuples (state, action, reward, next_state)
 
-    main(maze_width, maze_height)
+    main(maze_width, maze_height, gamma)
