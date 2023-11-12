@@ -16,13 +16,13 @@ class Environment(MatrixMDPEnv):
     def __init__(self, maze_width, maze_height, block_pixel_size=None):
         # initializa maze
         print('Initialize maze')
-        maze = Maze(size_x=int(maze_width/2), size_y=int(maze_height/2))
+        self.maze_environment = Maze(size_x=int(maze_width/2), size_y=int(maze_height/2))
         
         # maze parameters
         self.maze_width = int(maze_width/2) * 2 + 1
         self.maze_height = int(maze_height/2) * 2 + 1
-        self.maze = maze.blocks
-        self.flatten_maze = maze.blocks.flatten().reshape(1, -1)
+        self.maze = self.maze_environment.blocks
+        self.flatten_maze = self.maze_environment.blocks.flatten().reshape(1, -1)
         print('Maze created')
         print('Maze size: {}x{}'.format(self.maze_width, self.maze_height))
 
@@ -160,10 +160,9 @@ class Environment(MatrixMDPEnv):
             pygame.display.init()
             self.window = pygame.display.set_mode(
                 (self.maze_width * self.block_pixel_size, self.maze_height * self.block_pixel_size)
-            ) #TODO: FIX SCREEN SIZE
+            )
         # draw maze
         self.window.fill((255, 255, 255))
-        self.block_pixel_size = 20
         for x in range(self.maze_width):
             for y in range(self.maze_height):
                 if self.maze[y, x]:
@@ -185,16 +184,16 @@ class Environment(MatrixMDPEnv):
                 self.window, 
                 (255, 0, 0), 
                 True, 
-                [(x, y), 
-                (x + self.block_pixel_size - 1, y + self.block_pixel_size - 1)], 
+                [(x + line_width, y + line_width), 
+                (x + self.block_pixel_size - 1 - line_width, y + self.block_pixel_size - 1 - line_width)], 
                 line_width
             )
             pygame.draw.lines(
                 self.window, 
                 (255, 0, 0), 
                 True, 
-                [(x, y + self.block_pixel_size - 1),
-                (x + self.block_pixel_size - 1, y)], 
+                [(x + line_width, y + self.block_pixel_size - 1 - line_width),
+                (x + self.block_pixel_size - 1 - line_width, y + line_width)], 
                 line_width
             )
         drawX(self.terminal_state_coord[0] * self.block_pixel_size, 

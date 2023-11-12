@@ -27,10 +27,10 @@ class Agent():
         pygame.draw.rect(window, 
             (0, 0, 255), 
             pygame.Rect(
-                block_pixel_size * self.agent_state[0],
-                block_pixel_size * self.agent_state[1],
-                block_pixel_size,
-                block_pixel_size,
+                block_pixel_size * self.agent_state[0] + int(block_pixel_size/5),
+                block_pixel_size * self.agent_state[1] + int(block_pixel_size/5),
+                block_pixel_size - 2 * int(block_pixel_size/5),
+                block_pixel_size - 2 * int(block_pixel_size/5),
             ),
         )
 
