@@ -1,17 +1,25 @@
 import numpy as np
-from environment import Environment
 
-ACTIONS_LIST = [0, 1, 2, 3] # [up, down, left, right]
 
 # Data collection
-def executing_policy(policy, env):
-    # execute policy in the environment to collect data
+def executing_policy(agent, env):
+    """
+    Execute policy in the environment to collect data
+
+    Args:
+        agent (Agent)
+        env (Environment)
+
+    Returns:
+        list os steps: [(state, action, reward, next_state), ...]
+    """
+
     current_state = env.state
-    episode = []
+    episode = [] # init
 
     while current_state != env.terminal_state:
         # select action from policy
-        action = select_action(policy, env, current_state)
+        action = select_action(agent.policy_agent, env, current_state)
 
         # compute step in environment
         next_state, reward, _, _, _ = env.step(action)
@@ -24,13 +32,12 @@ def executing_policy(policy, env):
         
     return episode
 
-def select_action(policy, env, current_state):
-    if current_state in policy:
+def select_action(policy_agent, env, current_state):
+    if current_state in policy_agent.policy.keys():
         current_state_coord = env.coordinates_from_state(current_state)
-        #TODO: se si passa policy agent c'è metodo take_action(state) per fare questa cosa
-        return np.random.choice(ACTIONS_LIST, policy[current_state_coord])
+        return policy_agent.take_action(current_state_coord)
     else:
-        # possible actions from current state
+        # select possible actions from current state with uniform distribution
         action_list = np.where(env.p[:, current_state, :] != 0)[1]
         return np.random.choice(action_list)
     

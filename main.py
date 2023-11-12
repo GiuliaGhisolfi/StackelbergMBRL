@@ -4,10 +4,13 @@ from src.environment import Environment
 from src.agent import Agent
 
 def main(maze_width, maze_height, gamma):
+    # initialize environment
     env = Environment(
             maze_width=maze_width, 
             maze_height=maze_height
             )
+    
+    # initialize agent: policy and model
     agent = Agent(
             initial_state_coord=env.initial_state_coord, 
             transition_matrix_initial_state=env.p[:, env.initial_state, :],
@@ -15,6 +18,7 @@ def main(maze_width, maze_height, gamma):
             actions_list_initial_state = np.where(env.p[:, env.initial_state, :] != 0)[1]
             )
     
+    # render environment and agent using pygame
     env.render()
     agent.render(env.window, env.block_pixel_size)
 

@@ -13,8 +13,8 @@ ACTION_MAP = { #TODO: togliere o cambiare mappatura
 class Agent():
     def __init__(self, initial_state_coord, transition_matrix_initial_state,
             gamma, actions_list_initial_state):
-        self.model = ModelAgent(initial_state_coord, transition_matrix_initial_state)
-        self.policy = PolicyAgent(gamma, initial_state_coord, actions_list_initial_state)
+        self.model_agent = ModelAgent(initial_state_coord, transition_matrix_initial_state)
+        self.policy_agent = PolicyAgent(gamma, initial_state_coord, actions_list_initial_state)
 
         self.initial_state = initial_state_coord
         self.agent_state = initial_state_coord
