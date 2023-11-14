@@ -1,4 +1,4 @@
-from utils import executing_policy
+from src.algorithms.utils import executing_policy
 
 # MAL: Model As Leader Algorithm
 def MAL(policy, model, env, n_episodes_per_iteration, alpha):

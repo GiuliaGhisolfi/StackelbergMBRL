@@ -1,5 +1,5 @@
-from utils import executing_policy
-from spinningup.spinup.algos.tf1.trpo import trpo
+from src.algorithms.utils import executing_policy
+#from spinningup.spinup.algos.tf1.trpo import trpo
 
 # PAL: Policy As Leader Algorithm
 def PAL(policy, model, env, n_episodes_per_iteration, alpha):

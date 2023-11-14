@@ -1,32 +1,16 @@
 import numpy as np
+import pygame
 
-from src.environment import Environment
-from src.agent import Agent
+from src.maze_solver import MazeSolver
 
 def main(maze_width, maze_height, gamma):
-    # initialize environment
-    env = Environment(
-            maze_width=maze_width, 
-            maze_height=maze_height
-            )
-    
-    # initialize agent: policy and model
-    agent = Agent(
-            initial_state_coord=env.initial_state_coord, 
-            transition_matrix_initial_state=env.p[:, env.initial_state, :],
-            gamma=gamma, 
-            actions_list_initial_state = np.where(env.p[:, env.initial_state, :] != 0)[1]
-            )
-    
-    # render environment and agent using pygame
-    env.render()
-    agent.render(env.window, env.block_pixel_size)
-
+    maze_solver = MazeSolver(maze_width, maze_height, gamma, algorithm='PAL', n_episodes_per_iteration=20)
+    maze_solver.run()   
 
 if __name__ == '__main__':
     # maze parameters
-    maze_width = 61
-    maze_height = 31
+    maze_width = 31
+    maze_height = 17
 
     # policy agent parameters
     alpha = 0.01 # learning rate for policy improvment

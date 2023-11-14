@@ -209,6 +209,3 @@ class Environment(MatrixMDPEnv):
                 (self.block_pixel_size - 2 * line_width),
             ),
         )
-        
-        # display update
-        pygame.display.update()
