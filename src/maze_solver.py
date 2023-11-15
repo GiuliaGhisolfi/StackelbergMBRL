@@ -55,4 +55,4 @@ class MazeSolver():
             
             # display update
             pygame.display.update()
-            pygame.time.wait(5) # wait
+            #pygame.time.wait(5) # wait

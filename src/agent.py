@@ -9,7 +9,7 @@ ACTION_MAP = {
     2: 'left', 
     3: 'right'
 }
-PROBABILITY_PENALIZATION_FACTOR = 0.5
+PROBABILITY_PENALIZATION_FACTOR = 0.1
 
 def compute_action_between_states(state_from_coord, state_to_coord):
     if state_from_coord[1] - 1 == state_to_coord[1]:
@@ -147,7 +147,8 @@ class PolicyAgent():
             # update policy
             self.policy[state_coord] = actions_probability_list
         
-        # check if agent is in a blind corridor #TODO: togliere
+        #TODO: togliere
+        # check if agent is in a blind corridor 
         if len(np.where(transition_matrix != 0)[1]) == 1:
             next_state_corridor_coord = previous_state_coord
             update_policy = False
@@ -169,6 +170,23 @@ class PolicyAgent():
                 actions_probability_list = actions_probability_list / np.sum(actions_probability_list)
                 # update policy
                 self.policy[start_blind_corridor_coord] = actions_probability_list
+            
+                # update policy for all states in the blind corridor
+                state_from_coord = state_coord
+                for state_to_coord in reversed(self.path):
+                    action = compute_action_between_states(state_from_coord, state_to_coord)
+
+                    # set probability of action to 1
+                    actions_probability_list = np.zeros(N_ACTIONS)
+                    actions_probability_list[action] = 1
+
+                    # update policy
+                    self.policy[state_from_coord] = actions_probability_list
+                    
+                    if state_to_coord == start_blind_corridor_coord:
+                        break
+                    state_from_coord = state_to_coord
+
     
     def reward_function(self, episode):
         """

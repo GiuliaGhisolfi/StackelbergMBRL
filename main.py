@@ -9,8 +9,8 @@ def main(maze_width, maze_height, gamma):
 
 if __name__ == '__main__':
     # maze parameters
-    maze_width = 31
-    maze_height = 17
+    maze_width = 101
+    maze_height = 51
 
     # policy agent parameters
     alpha = 0.01 # learning rate for policy improvment
