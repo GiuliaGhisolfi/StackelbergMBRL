@@ -32,22 +32,22 @@ class MazeSolver():
         self.current_state_coord = self.env.initial_state_coord
 
     def run(self):
-        while self.agent.agent_state != self.env.terminal_state_coord:
+        while self.agent.agent_state_coord != self.env.terminal_state_coord:
             # execute policy
-            next_action = self.agent.policy_agent.take_action(self.agent.agent_state)
+            next_action = self.agent.policy_agent.take_action(self.agent.agent_state_coord)
             
             # take a step in the environment
             self.env.step(next_action)
 
             # update current state
-            previous_state = self.agent.agent_state
-            self.agent.agent_state = self.env.coordinates_from_state(self.env.state)
+            previous_state = self.agent.agent_state_coord
+            self.agent.agent_state_coord = self.env.coordinates_from_state(self.env.state)
 
             # update agent
-            self.agent.update(self.agent.agent_state, previous_state,
+            self.agent.update(self.agent.agent_state_coord, previous_state,
                 previous_state_cardinality=self.env.state_from_coordinates(previous_state[0], previous_state[1]), 
                 transition_matrix=self.env.p[:, self.env.state, :], 
-                terminal_state_check=(self.agent.agent_state == self.env.terminal_state_coord))
+                terminal_state_check=(self.agent.agent_state_coord == self.env.terminal_state_coord))
             
             # render environment and agent using pygame
             self.env.render()

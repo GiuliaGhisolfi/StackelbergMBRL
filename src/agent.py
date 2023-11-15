@@ -20,7 +20,7 @@ def compute_action_between_states(state_from, state_to):
         return 2 # left
     elif state_from[0] + 1 == state_to[0]:
         return 3 # right
-    return None
+    return None # error
 
 class Agent():
     def __init__(self, initial_state_coord, transition_matrix_initial_state,
@@ -28,19 +28,21 @@ class Agent():
         self.model_agent = ModelAgent(initial_state_coord, transition_matrix_initial_state)
         self.policy_agent = PolicyAgent(gamma, initial_state_coord, actions_list_initial_state)
 
-        self.initial_state = initial_state_coord
-        self.agent_state = initial_state_coord
+        self.initial_state_coord = initial_state_coord
+        self.agent_state_coord = initial_state_coord
 
-        self.policy_agent.path = [self.agent_state] # list of states visited by agent
+        self.policy_agent.path = [self.agent_state_coord] # list of states visited by agent
         self.line_path = [] # list of lines to draw path
     
-    def update(self, current_state, revious_state, previous_state_cardinality, transition_matrix, terminal_state_check):
-        self.agent_state = current_state
-        self.policy_agent.path.append(current_state)
+    def update(self, current_state_coord, previous_state_coord, previous_state_cardinality, 
+        transition_matrix, terminal_state_check):
+        self.agent_state_coord = current_state_coord
+        self.policy_agent.path.append(current_state_coord)
 
         if not terminal_state_check:
-            self.model_agent.update_model_space(current_state, transition_matrix)
-            self.policy_agent.update_policy(current_state, transition_matrix, previous_state_cardinality, revious_state)
+            self.model_agent.update_model_space(current_state_coord, transition_matrix)
+            self.policy_agent.update_policy(current_state_coord, previous_state_coord, 
+                previous_state_cardinality, transition_matrix)
     
     def render(self, window, block_pixel_size):
         # draw path
@@ -66,8 +68,8 @@ class Agent():
         pygame.draw.rect(window, 
             (0, 0, 255), 
             pygame.Rect(
-                block_pixel_size * self.agent_state[0] + int(block_pixel_size/5),
-                block_pixel_size * self.agent_state[1] + int(block_pixel_size/5),
+                block_pixel_size * self.agent_state_coord[0] + int(block_pixel_size/5),
+                block_pixel_size * self.agent_state_coord[1] + int(block_pixel_size/5),
                 block_pixel_size - 2 * int(block_pixel_size/5),
                 block_pixel_size - 2 * int(block_pixel_size/5),
             ),
@@ -85,45 +87,45 @@ class ModelAgent():
         #return next_state
         pass
 
-    def update_model(self, state, transition_matrix):
+    def update_model(self, state_coord, transition_matrix):
         # update state space and action
-        self.update_model_space(state, transition_matrix)
+        self.update_model_space(state_coord, transition_matrix)
 
         # update transition matrix: SAME THAT UPDATE POLICY
         #TODO
     
-    def update_model_space(self, state, transition_matrix):
+    def update_model_space(self, state_coord, transition_matrix):
         #transition_matrix = env.p[:, state, :]
         # state as a tuple (x,y)
-        if state not in self.model_state_space.keys():
-            self.model_state_space[state] = np.where(transition_matrix != 0)[1] # possible actions from state
+        if state_coord not in self.model_state_space.keys():
+            self.model_state_space[state_coord] = np.where(transition_matrix != 0)[1] # possible actions from state
 
 
 class PolicyAgent():
     def __init__(self, gamma, initial_state_coord, actions_list_initial_state):
         self.gamma = gamma # discount factor
-        self.initial_state = initial_state_coord
+        self.initial_state_coord = initial_state_coord
         self.initialize_policy(initial_state_coord, actions_list_initial_state)
-        self.path = [self.initial_state] # list of states visited by agent
+        self.path = [self.initial_state_coord] # list of states visited by agent
     
-    def initialize_policy(self, initial_state, actions_list_initial_state):
+    def initialize_policy(self, initial_state_coord, actions_list_initial_state):
         self.policy = dict() # {(x,y): [action's probability]}
 
         actions_probability_list = np.zeros(N_ACTIONS)
         actions_probability_list[actions_list_initial_state] = 1/len(actions_list_initial_state)
 
-        self.policy[initial_state] = actions_probability_list
+        self.policy[initial_state_coord] = actions_probability_list
     
-    def take_action(self, state):
-        self.action = np.random.choice(ACTIONS_LIST, p=self.policy[state])
+    def take_action(self, state_coord):
+        self.action = np.random.choice(ACTIONS_LIST, p=self.policy[state_coord])
         return self.action
 
-    def update_policy(self, state, transition_matrix, previous_state_cardinality, previous_state):
+    def update_policy(self, state_coord, previous_state_coord, previous_state_cardinality, transition_matrix):
         update_policy = False
 
-        if state in self.policy.keys():
+        if state_coord in self.policy.keys():
             if len(np.where(transition_matrix != 0)[1]) > 1:
-                actions_probability_list = self.policy[state]
+                actions_probability_list = self.policy[state_coord]
                 actions_probability_list[np.where(transition_matrix[previous_state_cardinality, :] != 0)[0]
                     ] *= PROBABILITY_PENALIZATION_FACTOR
                 update_policy = True
@@ -143,11 +145,11 @@ class PolicyAgent():
             # normalize probability distribution
             actions_probability_list = actions_probability_list / np.sum(actions_probability_list)
             # update policy
-            self.policy[state] = actions_probability_list
+            self.policy[state_coord] = actions_probability_list
         
         # check if agent is in a blind corridor #TODO: togliere
         if len(np.where(transition_matrix != 0)[1]) == 1:
-            next_state_corridor = previous_state
+            next_state_corridor = previous_state_coord
             update_policy = False
 
             for start_blind_corridor in reversed(self.path[:-1]):
