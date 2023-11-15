@@ -13,7 +13,7 @@ class MazeSolver():
         
         # initialize environment
         self.env = Environment(
-            maze_width=maze_width, 
+            maze_width=maze_width,
             maze_height=maze_height
             )
         
