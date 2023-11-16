@@ -2,7 +2,7 @@ import numpy as np
 import pygame
 
 from src.environment import Environment
-from src.agent import Agent
+from src.algorithms.baseline import Baseline
 from src.algorithms.MAL import MAL
 from src.algorithms.PAL import PAL
 
@@ -20,11 +20,16 @@ class MazeSolver():
             )
         
         # initialize agent: policy and model
-        self.agent = Agent(
-            gamma=gamma,
-            initial_state_coord=self.env.initial_state_coord,
-            transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :],
-            )
+        if self.algorithm == 'baseline':
+            self.agent = Baseline(
+                gamma=gamma,
+                initial_state_coord=self.env.initial_state_coord,
+                transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :],
+                )
+        elif self.algorithm == 'MAL':
+            pass
+        elif self.algorithm == 'PAL':
+            pass
         
         self.render()
         
@@ -59,7 +64,7 @@ class MazeSolver():
             self.previous_state = self.agent.agent_state_coord
 
             # update agent
-            self.agent.update_model_parameters(
+            self.agent.update_agent_parameters(
                     next_state_coord=self.env.coordinates_from_state(self.env.state),
                     previous_state_coord=self.previous_state,
                     previous_state_cardinality=self.env.state_from_coordinates(self.previous_state[0], self.previous_state[1]), 

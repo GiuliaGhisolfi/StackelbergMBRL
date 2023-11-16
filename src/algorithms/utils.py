@@ -40,4 +40,15 @@ def select_action(policy_agent, env, current_state):
         # select possible actions from current state with uniform distribution
         action_list = np.where(env.p[:, current_state, :] != 0)[1]
         return np.random.choice(action_list)
+
+def compute_action_between_states(state_from_coord, state_to_coord):
+    if state_from_coord[1] - 1 == state_to_coord[1]:
+        return 0 # up
+    elif state_from_coord[1] + 1 == state_to_coord[1]:
+        return 1 # down
+    elif state_from_coord[0] - 1 == state_to_coord[0]:
+        return 2 # left
+    elif state_from_coord[0] + 1 == state_to_coord[0]:
+        return 3 # right
+    return None # error
     
