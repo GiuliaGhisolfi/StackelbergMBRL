@@ -21,10 +21,9 @@ class MazeSolver():
         
         # initialize agent: policy and model
         self.agent = Agent(
-            initial_state_coord=self.env.initial_state_coord, 
+            gamma=gamma,
+            initial_state_coord=self.env.initial_state_coord,
             transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :],
-            gamma=gamma, 
-            actions_list_initial_state = np.where(self.env.p[:, self.env.initial_state, :] != 0)[1]
             )
         
         self.render()
@@ -51,26 +50,30 @@ class MazeSolver():
         # run algorithm
         for epoch in range(self.max_epochs):
             # execute policy
-            next_action = self.agent.policy_agent.take_action(self.agent.agent_state_coord)
+            next_action = self.agent.take_action()
             
             # take a step in the environment
             self.env.step(next_action)
 
             # update current state
-            previous_state = self.agent.agent_state_coord
-            self.agent.agent_state_coord = self.env.coordinates_from_state(self.env.state)
+            self.previous_state = self.agent.agent_state_coord
 
             # update agent
-            self.agent.update(self.agent.agent_state_coord, previous_state,
-                previous_state_cardinality=self.env.state_from_coordinates(previous_state[0], previous_state[1]), 
-                transition_matrix=self.env.p[:, self.env.state, :], 
-                terminal_state_check=(self.agent.agent_state_coord == self.env.terminal_state_coord))
+            self.agent.update_model_parameters(
+                    next_state_coord=self.env.coordinates_from_state(self.env.state),
+                    previous_state_coord=self.previous_state,
+                    previous_state_cardinality=self.env.state_from_coordinates(self.previous_state[0], self.previous_state[1]), 
+                    transition_matrix=self.env.p[:, self.env.state, :],
+                    reached_terminal_state=(self.env.coordinates_from_state(self.env.state) == self.env.terminal_state_coord)
+                )
             
             # render environment and agent
             self.render()
             
             if self.agent.agent_state_coord == self.env.terminal_state_coord:
+                print('Agent reached terminal state in {} steps'.format(epoch))
                 break # stop if agent reached terminal state
+                
     
     def run_PAL(self):
         pass

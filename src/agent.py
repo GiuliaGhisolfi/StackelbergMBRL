@@ -3,13 +3,8 @@ import pygame
 
 N_ACTIONS = 4
 ACTIONS_LIST = [0, 1, 2, 3] # [up, down, left, right]
-ACTION_MAP = {
-    0: 'up', 
-    1: 'down', 
-    2: 'left', 
-    3: 'right'
-}
 PROBABILITY_PENALIZATION_FACTOR = 0.1
+
 
 def compute_action_between_states(state_from_coord, state_to_coord):
     if state_from_coord[1] - 1 == state_to_coord[1]:
@@ -22,110 +17,53 @@ def compute_action_between_states(state_from_coord, state_to_coord):
         return 3 # right
     return None # error
 
+
 class Agent():
-    def __init__(self, initial_state_coord, transition_matrix_initial_state,
-            gamma, actions_list_initial_state):
-        self.model_agent = ModelAgent(initial_state_coord, transition_matrix_initial_state)
-        self.policy_agent = PolicyAgent(gamma, initial_state_coord, actions_list_initial_state)
-
-        self.initial_state_coord = initial_state_coord
+    def __init__(self, gamma, initial_state_coord, transition_matrix_initial_state):
+        self.gamma = gamma # discount factor
         self.agent_state_coord = initial_state_coord
-
-        self.policy_agent.path = [self.agent_state_coord] # list of states visited by agent
+        
+        self.path = [self.agent_state_coord] # list of states visited by agent
         self.line_path = [] # list of lines to draw path
-    
-    def update(self, current_state_coord, previous_state_coord, previous_state_cardinality, 
-        transition_matrix, terminal_state_check):
-        self.agent_state_coord = current_state_coord
-        self.policy_agent.path.append(current_state_coord)
-
-        if not terminal_state_check:
-            self.model_agent.update_model_space(current_state_coord, transition_matrix)
-            self.policy_agent.update_policy(current_state_coord, previous_state_coord, 
-                previous_state_cardinality, transition_matrix)
-    
-    def render(self, window, block_pixel_size):
-        # draw path
-        if block_pixel_size % 2:
-            line_width = 2
-        else: 
-            line_width = 3
-
-        self.line_path.append(
-            (self.policy_agent.path[-1][0] * block_pixel_size + int(block_pixel_size/2),
-            self.policy_agent.path[-1][1] * block_pixel_size + int(block_pixel_size/2))
-        )
-        if len(self.line_path) > 1:
-            pygame.draw.lines(
-                window,
-                (0, 0, 0),
-                False,
-                self.line_path,
-                line_width
-            )
-
-        # draw agent
-        pygame.draw.rect(window, 
-            (0, 0, 255), 
-            pygame.Rect(
-                block_pixel_size * self.agent_state_coord[0] + int(block_pixel_size/5),
-                block_pixel_size * self.agent_state_coord[1] + int(block_pixel_size/5),
-                block_pixel_size - 2 * int(block_pixel_size/5),
-                block_pixel_size - 2 * int(block_pixel_size/5),
-            ),
-        )
-
-
-class ModelAgent():
-    def __init__(self, initial_state_coord, transition_matrix_initial_state):
-        self.model_action_space = [0, 1, 2, 3] # [up, down, left, right]
         self.model_state_space = dict() # discrete: {(x,y): [possible actions]}
 
-        self.update_model_space(initial_state_coord, transition_matrix_initial_state)
-
-    def transition_function(self, state, action):
-        #return next_state
-        pass
-
-    def update_model(self, state_coord, transition_matrix):
-        # update state space and action
-        self.update_model_space(state_coord, transition_matrix)
-
-        # update transition matrix: SAME THAT UPDATE POLICY
-        #TODO
+        self.initialize_policy(np.where(transition_matrix_initial_state != 0)[1])
+        self.update_state_space(transition_matrix_initial_state)
     
-    def update_model_space(self, state_coord, transition_matrix):
-        #transition_matrix = env.p[:, state, :]
-        # state as a tuple (x,y)
-        if state_coord not in self.model_state_space.keys():
-            self.model_state_space[state_coord] = np.where(transition_matrix != 0)[1] # possible actions from state
-
-
-class PolicyAgent():
-    def __init__(self, gamma, initial_state_coord, actions_list_initial_state):
-        self.gamma = gamma # discount factor
-        self.initial_state_coord = initial_state_coord
-        self.initialize_policy(initial_state_coord, actions_list_initial_state)
-        self.path = [self.initial_state_coord] # list of states visited by agent
-    
-    def initialize_policy(self, initial_state_coord, actions_list_initial_state):
+    def initialize_policy(self, actions_list_initial_state):
         self.policy = dict() # {(x,y): [action's probability]}
 
         actions_probability_list = np.zeros(N_ACTIONS)
         actions_probability_list[actions_list_initial_state] = 1/len(actions_list_initial_state)
 
-        self.policy[initial_state_coord] = actions_probability_list
+        self.policy[self.agent_state_coord] = actions_probability_list
     
-    def take_action(self, state_coord):
-        self.action = np.random.choice(ACTIONS_LIST, p=self.policy[state_coord])
-        return self.action
+    ######## parameters update methods ########
+    def update_model_parameters(self, next_state_coord, previous_state_coord, previous_state_cardinality, 
+        transition_matrix, reached_terminal_state):
+        self.update_agent_state(next_state_coord)
 
-    def update_policy(self, state_coord, previous_state_coord, previous_state_cardinality, transition_matrix):
+        if not reached_terminal_state:
+            self.update_state_space(transition_matrix)
+            self.update_policy(previous_state_coord, previous_state_cardinality, transition_matrix)
+
+    def update_agent_state(self, next_state_coord):
+        # update current state and path
+        self.agent_state_coord = next_state_coord
+        self.path.append(next_state_coord)
+    
+    def update_state_space(self, transition_matrix):
+        #transition_matrix = env.p[:, state, :]
+        # state as a tuple (x,y)
+        if self.agent_state_coord not in self.model_state_space.keys():
+            self.model_state_space[self.agent_state_coord] = np.where(transition_matrix != 0)[1] # possible actions from state
+
+    def update_policy(self, previous_state_coord, previous_state_cardinality, transition_matrix):
         update_policy = False
 
-        if state_coord in self.policy.keys():
+        if self.agent_state_coord in self.policy.keys():
             if len(np.where(transition_matrix != 0)[1]) > 1:
-                actions_probability_list = self.policy[state_coord]
+                actions_probability_list = self.policy[self.agent_state_coord]
                 actions_probability_list[np.where(transition_matrix[previous_state_cardinality, :] != 0)[0]
                     ] *= PROBABILITY_PENALIZATION_FACTOR
                 update_policy = True
@@ -145,7 +83,7 @@ class PolicyAgent():
             # normalize probability distribution
             actions_probability_list = actions_probability_list / np.sum(actions_probability_list)
             # update policy
-            self.policy[state_coord] = actions_probability_list
+            self.policy[ self.agent_state_coord] = actions_probability_list
         
         #TODO: togliere
         # check if agent is in a blind corridor 
@@ -172,7 +110,7 @@ class PolicyAgent():
                 self.policy[start_blind_corridor_coord] = actions_probability_list
             
                 # update policy for all states in the blind corridor
-                state_from_coord = state_coord
+                state_from_coord = self.agent_state_coord
                 for state_to_coord in reversed(self.path):
                     action = compute_action_between_states(state_from_coord, state_to_coord)
 
@@ -187,7 +125,11 @@ class PolicyAgent():
                         break
                     state_from_coord = state_to_coord
 
-    
+    ######## policy agent methods ########
+    def take_action(self):
+        self.action = np.random.choice(ACTIONS_LIST, p=self.policy[self.agent_state_coord])
+        return self.action
+
     def reward_function(self, episode):
         """
         Compute cumulative reward from the episode
@@ -198,3 +140,35 @@ class PolicyAgent():
             return episode[0][2] # reward of the final step
         else:
             return sum([self.gamma**t * self.reward_function(episode[1:]) for t in range(T)]) # recursive call
+
+    ######## pygame render ########
+    def render(self, window, block_pixel_size):
+        # draw path
+        if block_pixel_size % 2:
+            line_width = 2
+        else: 
+            line_width = 3
+
+        self.line_path.append(
+            (self.path[-1][0] * block_pixel_size + int(block_pixel_size/2),
+            self.path[-1][1] * block_pixel_size + int(block_pixel_size/2))
+        )
+        if len(self.line_path) > 1:
+            pygame.draw.lines(
+                window,
+                (0, 0, 0),
+                False,
+                self.line_path,
+                line_width
+            )
+
+        # draw agent
+        pygame.draw.rect(window, 
+            (0, 0, 255), 
+            pygame.Rect(
+                block_pixel_size * self.agent_state_coord[0] + int(block_pixel_size/5),
+                block_pixel_size * self.agent_state_coord[1] + int(block_pixel_size/5),
+                block_pixel_size - 2 * int(block_pixel_size/5),
+                block_pixel_size - 2 * int(block_pixel_size/5),
+            ),
+        )
