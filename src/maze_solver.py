@@ -1,6 +1,5 @@
 import numpy as np
 import pygame
-
 from src.environment import Environment
 from src.algorithms.baseline import Baseline
 from src.algorithms.MAL import MAL
@@ -8,10 +7,10 @@ from src.algorithms.PAL import PAL
 
 class MazeSolver():
 
-    def __init__(self, maze_width, maze_height, gamma, algorithm='baseline', max_epochs=100, n_episodes_per_iteration=100):
+    def __init__(self, maze_width, maze_height, max_epochs, algorithm='baseline',
+        n_episodes_per_iteration=100, gamma=0.9, alpha=0.01, beta=0.01):
         self.algorithm = algorithm # 'PAL' or 'MAL' or 'baseline'
         self.max_epochs = max_epochs
-        self.n_episodes_per_iteration = n_episodes_per_iteration
 
         # initialize environment
         self.env = Environment(
@@ -27,20 +26,23 @@ class MazeSolver():
                 transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :],
                 )
         elif self.algorithm == 'MAL':
-            pass
+            self.agent = MAL(
+                gamma=gamma,
+                initial_state_coord=self.env.initial_state_coord,
+                transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :],
+                learning_rate=beta,
+                n_episodes_per_iteration=n_episodes_per_iteration
+                )
         elif self.algorithm == 'PAL':
-            pass
+            self.agent = PAL(
+                gamma=gamma,
+                initial_state_coord=self.env.initial_state_coord,
+                transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :],
+                learning_rate=alpha,
+                n_episodes_per_iteration=n_episodes_per_iteration
+                )
         
         self.render()
-        
-    def render(self, wait=0):
-        # Render environment and agent using pygame
-        self.env.render()
-        self.agent.render(self.env.window, self.env.block_pixel_size)
-
-        # display update
-        pygame.display.update()
-        pygame.time.wait(wait) # wait (ms)
 
     def run(self):
         # run algorithm
@@ -85,3 +87,12 @@ class MazeSolver():
 
     def run_MAL(self):
         pass
+
+    def render(self, wait=0):
+        # Render environment and agent using pygame
+        self.env.render()
+        self.agent.render(self.env.window, self.env.block_pixel_size)
+
+        # display update
+        pygame.display.update()
+        pygame.time.wait(wait) # wait (ms)

@@ -2,7 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import spy
 import pygame
-
 from matrix_mdp.envs import MatrixMDPEnv
 from src.maze import Maze
 

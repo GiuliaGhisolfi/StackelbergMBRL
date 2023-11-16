@@ -1,5 +1,4 @@
 import numpy as np
-
 from src.agent import Agent
 from src.algorithms.utils import compute_action_between_states
 
