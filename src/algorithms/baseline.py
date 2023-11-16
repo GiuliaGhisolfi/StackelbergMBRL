@@ -1,5 +1,5 @@
 import numpy as np
-from src.agent import Agent
+from src.stackelberg_agent import StackelbergAgent
 from src.algorithms.utils import compute_action_between_states
 
 N_ACTIONS = 4
@@ -7,7 +7,7 @@ ACTIONS_LIST = [0, 1, 2, 3] # [up, down, left, right]
 PROBABILITY_PENALIZATION_FACTOR = 0.1
 
 
-class Baseline(Agent):
+class Baseline(StackelbergAgent):
     def __init__(self, gamma, initial_state_coord, transition_matrix_initial_state):
         super().__init__(gamma, initial_state_coord, transition_matrix_initial_state)
 

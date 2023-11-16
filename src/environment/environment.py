@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib.pyplot import spy
 import pygame
 from matrix_mdp.envs import MatrixMDPEnv
-from src.maze import Maze
+from src.environment.maze import Maze
 
 SCREEN_WIDTH_MAX = 1920
 SCREEN_HEIGHT_MAX = 1080

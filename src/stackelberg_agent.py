@@ -5,7 +5,7 @@ N_ACTIONS = 4
 ACTIONS_LIST = [0, 1, 2, 3] # [up, down, left, right]
 
 
-class Agent():
+class StackelbergAgent():
     def __init__(self, gamma, initial_state_coord, transition_matrix_initial_state):
         self.gamma = gamma # discount factor
         self.agent_state_coord = initial_state_coord

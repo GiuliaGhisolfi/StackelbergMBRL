@@ -1,11 +1,11 @@
 import numpy as np
 import pygame
-from src.environment import Environment
+from src.environment.environment import Environment
 from src.algorithms.baseline import Baseline
 from src.algorithms.MAL import MAL
 from src.algorithms.PAL import PAL
 
-class MazeSolver():
+class MBRLMazeSolver():
 
     def __init__(self, maze_width, maze_height, max_epochs, algorithm='baseline',
         n_episodes_per_iteration=100, gamma=0.9, alpha=0.01, beta=0.01):

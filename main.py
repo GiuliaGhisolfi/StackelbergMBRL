@@ -1,7 +1,7 @@
-from src.maze_solver import MazeSolver
+from src.mbrl_maze_solver import MBRLMazeSolver
 
 def main(maze_width, maze_height, max_epochs, algorithm, n_episodes_per_iteration, gamma, alpha, beta):
-    maze_solver = MazeSolver( 
+    mbrl_maze_solver = MBRLMazeSolver( 
         maze_width=maze_width, 
         maze_height=maze_height,
         max_epochs=max_epochs, 
@@ -12,7 +12,7 @@ def main(maze_width, maze_height, max_epochs, algorithm, n_episodes_per_iteratio
         beta=beta
     )
 
-    maze_solver.run()   
+    mbrl_maze_solver.run()   
 
 
 if __name__ == '__main__':
