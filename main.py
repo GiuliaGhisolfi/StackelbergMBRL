@@ -1,10 +1,8 @@
-import numpy as np
-import pygame
-
 from src.maze_solver import MazeSolver
 
 def main(maze_width, maze_height, gamma):
-    maze_solver = MazeSolver(maze_width, maze_height, gamma, algorithm='PAL', n_episodes_per_iteration=20)
+    maze_solver = MazeSolver(maze_width, maze_height, gamma, algorithm='baseline', 
+        max_epochs=6000, n_episodes_per_iteration=20)
     maze_solver.run()   
 
 if __name__ == '__main__':

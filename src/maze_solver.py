@@ -8,9 +8,11 @@ from src.algorithms.PAL import PAL
 
 class MazeSolver():
 
-    def __init__(self, maze_width, maze_height, gamma, algorithm, n_episodes_per_iteration):
-        self.algorithm = algorithm
-        
+    def __init__(self, maze_width, maze_height, gamma, algorithm='baseline', max_epochs=100, n_episodes_per_iteration=100):
+        self.algorithm = algorithm # 'PAL' or 'MAL' or 'baseline'
+        self.max_epochs = max_epochs
+        self.n_episodes_per_iteration = n_episodes_per_iteration
+
         # initialize environment
         self.env = Environment(
             maze_width=maze_width,
@@ -25,14 +27,29 @@ class MazeSolver():
             actions_list_initial_state = np.where(self.env.p[:, self.env.initial_state, :] != 0)[1]
             )
         
-        # render environment and agent using pygame
+        self.render()
+        
+    def render(self, wait=0):
+        # Render environment and agent using pygame
         self.env.render()
         self.agent.render(self.env.window, self.env.block_pixel_size)
 
-        self.current_state_coord = self.env.initial_state_coord
+        # display update
+        pygame.display.update()
+        pygame.time.wait(wait) # wait (ms)
 
     def run(self):
-        while self.agent.agent_state_coord != self.env.terminal_state_coord:
+        # run algorithm
+        if self.algorithm == 'PAL':
+            self.run_PAL()
+        elif self.algorithm == 'MAL':
+            self.run_MAL()
+        elif self.algorithm == 'baseline':
+            self.run_baseline()
+
+    def run_baseline(self):
+        # run algorithm
+        for epoch in range(self.max_epochs):
             # execute policy
             next_action = self.agent.policy_agent.take_action(self.agent.agent_state_coord)
             
@@ -49,10 +66,14 @@ class MazeSolver():
                 transition_matrix=self.env.p[:, self.env.state, :], 
                 terminal_state_check=(self.agent.agent_state_coord == self.env.terminal_state_coord))
             
-            # render environment and agent using pygame
-            self.env.render()
-            self.agent.render(self.env.window, self.env.block_pixel_size)
+            # render environment and agent
+            self.render()
             
-            # display update
-            pygame.display.update()
-            #pygame.time.wait(5) # wait
+            if self.agent.agent_state_coord == self.env.terminal_state_coord:
+                break # stop if agent reached terminal state
+    
+    def run_PAL(self):
+        pass
+
+    def run_MAL(self):
+        pass

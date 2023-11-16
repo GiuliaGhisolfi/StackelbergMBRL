@@ -40,7 +40,7 @@ class Agent():
         self.policy_agent.path.append(current_state_coord)
 
         if not terminal_state_check:
-            #self.model_agent.update_model_space(current_state_coord, transition_matrix)
+            self.model_agent.update_model_space(current_state_coord, transition_matrix)
             self.policy_agent.update_policy(current_state_coord, previous_state_coord, 
                 previous_state_cardinality, transition_matrix)
     
