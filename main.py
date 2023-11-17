@@ -12,7 +12,7 @@ def main(maze_width, maze_height, max_epochs, algorithm, n_episodes_per_iteratio
         beta=beta
     )
 
-    mbrl_maze_solver.run()   
+    mbrl_maze_solver.run()
 
 
 if __name__ == '__main__':
