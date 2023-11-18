@@ -20,7 +20,7 @@ class PAL(StackelbergAgent):
             data_buffer.append(episode)
         
         # build policy-specific model
-        model = optimize_model(model, policy, data_buffer)
+        model = optimize_model(model, data_buffer)
 
         # improve policy (TRPO)
         #policy = trpo(policy, model, self.lr) #TODO: cambiare, vuole solo env con lo standard di OpenAI come input

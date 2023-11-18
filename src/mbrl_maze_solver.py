@@ -8,9 +8,12 @@ from src.algorithms.PAL import PAL
 class MBRLMazeSolver():
 
     def __init__(self, maze_width, maze_height, max_epochs, algorithm='baseline',
-        n_episodes_per_iteration=100, gamma=0.9, alpha=0.01, beta=0.01):
+        n_episodes_per_iteration=100, gamma=0.9, alpha=0.01, beta=0.01, render=True, render_wait=0):
         self.algorithm = algorithm # 'PAL' or 'MAL' or 'baseline'
         self.max_epochs = max_epochs
+
+        self.render_bool = render
+        self.render_wait = render_wait
 
         # initialize environment
         self.env = Environment(
@@ -42,7 +45,8 @@ class MBRLMazeSolver():
                 n_episodes_per_iteration=n_episodes_per_iteration
                 )
         
-        self.render()
+        if self.render_bool:
+            self.render(self.render_wait)
 
     def run(self):
         # run algorithm
@@ -75,7 +79,8 @@ class MBRLMazeSolver():
                 )
             
             # render environment and agent
-            self.render()
+            if self.render_bool:
+                self.render(self.render_wait)
             
             if self.agent.agent_state_coord == self.env.terminal_state_coord:
                 print('Agent reached terminal state in {} steps'.format(epoch))

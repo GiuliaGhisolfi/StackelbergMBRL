@@ -9,7 +9,9 @@ def main(maze_width, maze_height, max_epochs, algorithm, n_episodes_per_iteratio
         n_episodes_per_iteration=n_episodes_per_iteration, 
         gamma=gamma, 
         alpha=alpha, 
-        beta=beta
+        beta=beta,
+        render=render,
+        render_wait=render_wait
     )
 
     mbrl_maze_solver.run()
@@ -19,6 +21,10 @@ if __name__ == '__main__':
     # maze parameters
     maze_width = 101
     maze_height = 51
+    render = True
+    render_wait = 0 # time to wait between frames in ms
+
+    # agent parameters
     gamma = 0.9 # discount factor to compute expected cumulative reward
     algorithm = 'baseline' # 'PAL' or 'MAL' or 'baseline'
 
@@ -28,7 +34,7 @@ if __name__ == '__main__':
     # MAL agent parameters
     beta = 0.01 # learning rate for model update
 
-    # other parameters
+    # training parameters
     max_epochs = 6000
     n_episodes_per_iteration = 20 # number of episodes to run for each epoch
 
@@ -40,5 +46,7 @@ if __name__ == '__main__':
         n_episodes_per_iteration=n_episodes_per_iteration, 
         gamma=gamma, 
         alpha=alpha, 
-        beta=beta
+        beta=beta,
+        render=render,
+        render_wait=render_wait
     )
