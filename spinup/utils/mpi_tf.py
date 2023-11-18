@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 #from mpi4py import MPI
-import mpi4py
+import mpi4py as MPI
 from spinup.utils.mpi_tools import broadcast
 
 

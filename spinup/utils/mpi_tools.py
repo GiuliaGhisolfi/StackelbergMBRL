@@ -1,5 +1,5 @@
 #from mpi4py import MPI
-import mpi4py 
+import mpi4py as MPI 
 import os, subprocess, sys
 import numpy as np
 
