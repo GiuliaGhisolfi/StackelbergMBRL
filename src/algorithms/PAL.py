@@ -1,6 +1,6 @@
 from src.stackelberg_agent import StackelbergAgent
 from src.algorithms.utils import executing_policy
-#from spinningup.spinup.algos.tf1.trpo import trpo
+from spinup.algos.tf1.trpo import trpo
 
 
 class PAL(StackelbergAgent):
@@ -11,7 +11,7 @@ class PAL(StackelbergAgent):
         self.n_episodes_per_iteration = n_episodes_per_iteration
         self.lr = learning_rate # alpha
 
-    def PAL(policy, model, env):
+    def PAL(self, policy, model, env):
         data_buffer = [] # list of episodes, each episode is a list of tuples (state, action, reward, next_state)
 
         # collect data executing policy in the environment
@@ -28,7 +28,7 @@ class PAL(StackelbergAgent):
 
         return policy, model
 
-    def optimize_model(model, data_buffer):
-        # build model given data_buffer
-        # minimizzo KL div tra modello precedente e approx del modello ricavata dai dati
-        return model
+def optimize_model(model, data_buffer):
+    # build model given data_buffer
+    # minimizzo KL div tra modello precedente e approx del modello ricavata dai dati
+    return model
