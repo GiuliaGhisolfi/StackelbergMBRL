@@ -1,11 +1,7 @@
-import numpy as np
 import pygame
 
-N_ACTIONS = 4
-ACTIONS_LIST = [0, 1, 2, 3] # [up, down, left, right]
 
-
-class StackelbergAgent():
+class Agent():
     def __init__(self, gamma, initial_state_coord):
         self.gamma = gamma # discount factor
         self.agent_state_coord = initial_state_coord

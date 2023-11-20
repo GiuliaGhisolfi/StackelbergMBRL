@@ -1,5 +1,5 @@
 import numpy as np
-from src.stackelberg_agent import StackelbergAgent
+from src.agent import Agent
 
 N_ACTIONS = 4
 ACTIONS_LIST = [0, 1, 2, 3] # [up, down, left, right]
@@ -17,7 +17,7 @@ def compute_action_between_states(state_from_coord, state_to_coord):
         return 3 # right
     return None # error
 
-class Baseline(StackelbergAgent):
+class Baseline(Agent):
     def __init__(self, gamma, initial_state_coord, transition_matrix_initial_state):
         super().__init__(gamma, initial_state_coord)
     

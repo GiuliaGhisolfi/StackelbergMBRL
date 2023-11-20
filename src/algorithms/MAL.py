@@ -1,8 +1,8 @@
-from src.stackelberg_agent import StackelbergAgent
+from src.agent import Agent
 from src.algorithms.utils import executing_policy
 
 
-class MAL(StackelbergAgent):
+class MAL(Agent):
     # MAL: Model As Leader Algorithm
 
     def __init__(self, gamma, initial_state_coord, transition_matrix_initial_state, learning_rate, n_episodes_per_iteration):
