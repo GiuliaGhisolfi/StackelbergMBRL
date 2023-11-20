@@ -1,6 +1,8 @@
+import tensorflow as tf
+
 from src.stackelberg_agent import StackelbergAgent
 from src.algorithms.utils import executing_policy
-from spinup.algos.tf1.trpo import trpo
+from keras.losses import KLDivergence
 
 
 class PAL(StackelbergAgent):
@@ -30,5 +32,25 @@ class PAL(StackelbergAgent):
 
 def optimize_model(model, data_buffer):
     # build model given data_buffer
-    # minimizzo KL div tra modello precedente e approx del modello ricavata dai dati
+    # minimizzo KL div tra modello precedente (matrice di transizione P) e 
+    # approx del modello ricavata dai dati (matrice Q di approx di P dagli episodi in data_buffer)
+    for episode in data_buffer:
+        q = compute_transition_probability_from_episode(episode)
+        loss = compute_model_loss(
+            transition_probability_model=model.p, 
+            transition_probability_data=q)
+
     return model
+
+def compute_kl_divergence(y_true, y_pred):
+    # compute KL divergence between y_true and y_pred
+    kl_divergence = KLDivergence()
+    return kl_divergence(y_true, y_pred).numpy()
+
+def compute_model_loss(transition_probability_model, transition_probability_data):
+    kl_divergence = compute_kl_divergence(
+        y_true=transition_probability_model, 
+        y_pred=transition_probability_data
+        )
+    loss = kl_divergence.sum() # sum over all actions
+    return loss

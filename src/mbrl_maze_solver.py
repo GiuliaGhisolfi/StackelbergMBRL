@@ -1,7 +1,6 @@
-import numpy as np
 import pygame
 from src.environment.environment import Environment
-from src.algorithms.baseline import Baseline
+from src.agents.baseline import Baseline
 from src.algorithms.MAL import MAL
 from src.algorithms.PAL import PAL
 
