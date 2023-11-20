@@ -19,7 +19,7 @@ def compute_action_between_states(state_from_coord, state_to_coord):
 
 class Baseline(StackelbergAgent):
     def __init__(self, gamma, initial_state_coord, transition_matrix_initial_state):
-        super().__init__(gamma, initial_state_coord, transition_matrix_initial_state)
+        super().__init__(gamma, initial_state_coord)
     
         self.model_state_space = dict() # discrete: {(x,y): [possible actions]}
         self.__initialize_policy(np.where(transition_matrix_initial_state != 0)[1])
