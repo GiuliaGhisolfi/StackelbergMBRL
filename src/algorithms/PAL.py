@@ -5,11 +5,10 @@ from src.algorithms.utils import executing_policy
 from keras.losses import KLDivergence
 
 
-class PAL(Agent):
+class PAL():
     # PAL: Policy As Leader Algorithm
 
-    def __init__(self, gamma, initial_state_coord, transition_matrix_initial_state, learning_rate, n_episodes_per_iteration):
-        super().__init__(gamma, initial_state_coord, transition_matrix_initial_state)
+    def __init__(self, learning_rate, n_episodes_per_iteration):
         self.n_episodes_per_iteration = n_episodes_per_iteration
         self.lr = learning_rate # alpha
 
@@ -26,7 +25,7 @@ class PAL(Agent):
 
         # improve policy (TRPO)
         #policy = trpo(policy, model, self.lr) #TODO: cambiare, vuole solo env con lo standard di OpenAI come input
-        trpo(env) #FIXME: non lo so ma dovrebbe essere una funzione che copia l'enviroment, poi deve ritornare la policy
+        #(env) #FIXME: non lo so ma dovrebbe essere una funzione che copia l'enviroment, poi deve ritornare la policy
 
         return policy, model
 
@@ -54,3 +53,13 @@ def compute_model_loss(transition_probability_model, transition_probability_data
         )
     loss = kl_divergence.sum() # sum over all actions
     return loss
+
+def compute_transition_probability_from_episode(episode):
+    # compute transition probability from episode
+    # episode = [(state, action, reward, next_state), ...]
+    pass
+
+def compute_cost_function(policy_agent, policy_data):
+    # cost function to maximaize: expected cumulative reward executing a policy in the environment
+    # transition matrix is the one from the model
+    pass

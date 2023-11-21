@@ -39,22 +39,22 @@ class Environment(MatrixMDPEnv):
         # initialize initial and terminal state
         print('Compute initial and terminal state')
         self.compute_terminal_states()
-        self.compute_initial_states()
+        self.__compute_initial_states()
         print('Initial state: {}'.format(self.initial_state_coord))
 
         # compute prior and transitional distribuitions
         print('Compute prior and transitional distribuitions')
-        self.compute_prior_distribuitions()
-        self.compute_transition_distribuition()
+        self.__compute_prior_distribuitions()
+        self.__compute_transition_distribuition()
 
         # compute reward function
         print('Compute reward function')
-        self.compute_reward_function()
+        self.__compute_reward_function()
 
         super().__init__(p_0=self.p_0, p=self.p, r=self.r, render_mode='human')
         print('Environment created')
     
-    def compute_initial_states(self):
+    def __compute_initial_states(self):
         self.terminal_state_coord = self.coordinates_from_state(self.terminal_state)
 
         if self.terminal_state_coord[0] > self.maze_width/2: 
@@ -89,12 +89,12 @@ class Environment(MatrixMDPEnv):
         # sampling initial state from a uniform distribution over all possible states
         self.terminal_state = np.random.choice(np.arange(self.n_states))
  
-    def compute_prior_distribuitions(self):
+    def __compute_prior_distribuitions(self):
         # compute prior distribuition w.r.t. initial state
         self.p_0 = np.zeros(self.n_states)
         self.p_0[self.initial_state] = 1
     
-    def compute_transition_distribuition(self):
+    def __compute_transition_distribuition(self):
         # compute transition probability matrix given to the environment P(S'|S,A)
         self.p = np.zeros((self.n_states, self.n_states, self.n_actions)) # init
 
@@ -115,7 +115,7 @@ class Environment(MatrixMDPEnv):
         # set the translation probability from the terminal state to zero
         self.p[:, self.terminal_state, :] = np.zeros((self.n_states, self.n_actions))
     
-    def compute_reward_function(self):
+    def __compute_reward_function(self):
         # compute reward function penalizing the agent for each step taken
         self.r = -np.ones((self.n_states, self.n_states, self.n_actions))
 

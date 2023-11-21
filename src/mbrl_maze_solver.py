@@ -1,13 +1,14 @@
 import pygame
 from src.environment.environment import Environment
 from src.agents.baseline import Baseline
-from src.algorithms.MAL import MAL
-from src.algorithms.PAL import PAL
+from src.agents.model_agent import ModelAgent
+from src.agents.policy_agent import PolicyAgent
 
 class MBRLMazeSolver():
 
     def __init__(self, maze_width, maze_height, max_epochs, algorithm='baseline',
         n_episodes_per_iteration=100, gamma=0.9, alpha=0.01, beta=0.01, render=True, render_wait=0):
+        # TODO: parameters check
         self.algorithm = algorithm # 'PAL' or 'MAL' or 'baseline'
         self.max_epochs = max_epochs
 
@@ -27,21 +28,14 @@ class MBRLMazeSolver():
                 initial_state_coord=self.env.initial_state_coord,
                 transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :],
                 )
-        elif self.algorithm == 'MAL':
-            self.agent = MAL(
+        else: #TODO
+            self.model_agent = ModelAgent(
                 gamma=gamma,
-                initial_state_coord=self.env.initial_state_coord,
                 transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :],
-                learning_rate=beta,
-                n_episodes_per_iteration=n_episodes_per_iteration
+                initial_state_coord=self.env.initial_state_coord,
                 )
-        elif self.algorithm == 'PAL':
-            self.agent = PAL(
-                gamma=gamma,
-                initial_state_coord=self.env.initial_state_coord,
+            self.policy_agent = PolicyAgent(
                 transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :],
-                learning_rate=alpha,
-                n_episodes_per_iteration=n_episodes_per_iteration
                 )
         
         if self.render_bool:
@@ -49,12 +43,10 @@ class MBRLMazeSolver():
 
     def run(self):
         # run algorithm
-        if self.algorithm == 'PAL':
-            self.run_PAL()
-        elif self.algorithm == 'MAL':
-            self.run_MAL()
-        elif self.algorithm == 'baseline':
+        if self.algorithm == 'baseline':
             self.run_baseline()
+        else:
+            self.run()
 
     def run_baseline(self):
         # run algorithm
@@ -86,10 +78,8 @@ class MBRLMazeSolver():
                 break # stop if agent reached terminal state
                 
     
-    def run_PAL(self):
-        pass
-
-    def run_MAL(self):
+    def run(self):
+        #TODO
         pass
 
     def render(self, wait=0):

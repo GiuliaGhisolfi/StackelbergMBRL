@@ -1,3 +1,5 @@
 src/__pycache__
 src/algorithms/__pycache__
 src/agents/__pycache__
+src/environments/__pycache__
+dummy.ipynb
