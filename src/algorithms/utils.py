@@ -1,8 +1,10 @@
 import numpy as np
+from src.agents.policy_agent import PolicyAgent
+from src.environment.environment import Environment
 
 
 # Data collection
-def executing_policy(agent, env):
+def executing_policy(policy_agent: PolicyAgent, env: Environment):
     """
     Execute policy in the environment to collect data
 
@@ -15,20 +17,23 @@ def executing_policy(agent, env):
     """
 
     current_state = env.state
+    current_state_coord = env.coordinates_from_state(env.state)
     episode = [] # init
 
     while current_state != env.terminal_state:
         # select action from policy
-        action = select_action(agent.policy_agent, env, current_state)
+        action = policy_agent.compute_next_action(action=action, 
+                    transition_matrix=env.p[:, current_state, :])
 
         # compute step in environment
-        next_state, reward, _, _, _ = env.step(action)
+        next_state, reward, _, _, _ = env.step(action) # netx_state: numeric
 
         # save step in episode
-        episode.append((current_state, action, reward, next_state))
+        episode.append((current_state_coord, action, reward, env.coordinates_from_state(next_state)))
 
         # update current state
         current_state = next_state
+        current_state_coord = env.coordinates_from_state(next_state)
         
     return episode
 

@@ -28,7 +28,7 @@ class MBRLMazeSolver():
                 initial_state_coord=self.env.initial_state_coord,
                 transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :],
                 )
-        else: #TODO
+        else:
             self.model_agent = ModelAgent(
                 gamma=gamma,
                 transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :],
@@ -46,7 +46,7 @@ class MBRLMazeSolver():
         if self.algorithm == 'baseline':
             self.run_baseline()
         else:
-            self.run()
+            self.run_stackelberg() # FIXME: divide in PAL and MAL
 
     def run_baseline(self):
         # run algorithm
@@ -78,8 +78,9 @@ class MBRLMazeSolver():
                 break # stop if agent reached terminal state
                 
     
-    def run(self):
-        #TODO
+    def run_stackelberg(self):
+        # TODO
+
         pass
 
     def render(self, wait=0):

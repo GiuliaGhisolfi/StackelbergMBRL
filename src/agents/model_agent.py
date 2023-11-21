@@ -32,14 +32,14 @@ class ModelAgent(Agent):
         # P(A|S)
         if self.agent_state not in self.transition_distribuition.keys():
             self.transition_distribuition[self.agent_state] = np.where(transition_matrix != 0)[0]
-            self.transition_distribuition[self.agent_state] /= np.sum(self.actions_distribuition[self.agent_state])
+            self.transition_distribuition[self.agent_state] /= np.sum(self.transition_distribuition[self.agent_state])
         
     def __update_next_state_function(self, state, action, next_state):
-        # S,A -> S': deterministica
+        # S, A -> S': deterministica
         self.next_state_function[(state, action)] = next_state
 
     def __update_reward_function(self, state, action, reward):
-        # S,A -> R
+        # S, A -> R
         self.reward_function[(state, action)] = reward
     
     def __update_state_space(self, state_coord):

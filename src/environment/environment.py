@@ -144,6 +144,11 @@ class Environment(MatrixMDPEnv):
         temporary = temporary[np.where(self.flatten_maze == 0)]
 
         return np.where(temporary==1)[0][0]
+
+    def reset_environment(self):
+        # reset environment
+        print('Reset environment and initialize a new one')
+        self.__init__(maze_width=self.maze_width, maze_height=self.maze_height, block_pixel_size=self.block_pixel_size)
     
     def display_maze(self):
         plt.figure(figsize=(10, 10))
