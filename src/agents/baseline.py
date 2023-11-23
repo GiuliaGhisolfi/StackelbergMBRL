@@ -21,9 +21,9 @@ class Baseline(Agent):
     def __init__(self, gamma, initial_state_coord, transition_matrix_initial_state):
         super().__init__(gamma, initial_state_coord)
     
-        self.model_state_space = dict() # discrete: {(x,y): [possible actions]}
+        self.model_states_space = dict() # discrete: {(x,y): [possible actions]}
         self.__initialize_policy(np.where(transition_matrix_initial_state != 0)[1])
-        self.__update_state_space(transition_matrix_initial_state)
+        self.__update_states_space(transition_matrix_initial_state)
     
     def __initialize_policy(self, actions_list_initial_state):
         self.policy = dict() # {(x,y): [action's probability]}
@@ -42,7 +42,7 @@ class Baseline(Agent):
         self.__update_agent_state(next_state_coord)
 
         if not reached_terminal_state:
-            self.__update_state_space(transition_matrix)
+            self.__update_states_space(transition_matrix)
             self.__update_policy(previous_state_coord, previous_state_cardinality, transition_matrix)
 
     def __update_agent_state(self, next_state_coord):
@@ -50,11 +50,11 @@ class Baseline(Agent):
         self.agent_state_coord = next_state_coord
         self.path.append(next_state_coord)
     
-    def __update_state_space(self, transition_matrix):
+    def __update_states_space(self, transition_matrix):
         #transition_matrix = env.p[:, state, :]
         # state as a tuple (x,y)
-        if self.agent_state_coord not in self.model_state_space.keys():
-            self.model_state_space[self.agent_state_coord] = np.where(transition_matrix != 0)[1] # possible actions from state
+        if self.agent_state_coord not in self.model_states_space.keys():
+            self.model_states_space[self.agent_state_coord] = np.where(transition_matrix != 0)[1] # possible actions from state
 
     def __update_policy(self, previous_state_coord, previous_state_cardinality, transition_matrix):
         update_policy = False

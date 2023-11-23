@@ -1,15 +1,15 @@
-import numpy as np
+import nashpy as nash
 from src.agents.policy_agent import PolicyAgent
 from src.environment.environment import Environment
 
 
 # Data collection
-def executing_policy(policy_agent: PolicyAgent, env: Environment):
+def executing_policy(policy_agent: PolicyAgent, env: Environment, max_epochs_per_episode: int):
     """
     Execute policy in the environment to collect data
 
     Args:
-        agent (Agent)
+        agent (PolicyAgent)
         env (Environment)
 
     Returns:
@@ -18,9 +18,10 @@ def executing_policy(policy_agent: PolicyAgent, env: Environment):
 
     current_state = env.state
     current_state_coord = env.coordinates_from_state(env.state)
+    action = policy_agent.fittizial_first_action
     episode = [] # init
 
-    while current_state != env.terminal_state:
+    for _ in range(max_epochs_per_episode):
         # select action from policy
         action = policy_agent.compute_next_action(action=action, 
                     transition_matrix=env.p[:, current_state, :])
@@ -35,15 +36,20 @@ def executing_policy(policy_agent: PolicyAgent, env: Environment):
         current_state = next_state
         current_state_coord = env.coordinates_from_state(next_state)
         
+        # check if terminal state is reached
+        if current_state == env.terminal_state:
+            break
+        
     return episode
-
-def select_action(policy_agent, env, current_state):
-    if current_state in policy_agent.policy.keys():
-        current_state_coord = env.coordinates_from_state(current_state)
-        return policy_agent.take_action(current_state_coord)
-    else:
-        # select possible actions from current state with uniform distribution
-        action_list = np.where(env.p[:, current_state, :] != 0)[1]
-        return np.random.choice(action_list)
-
     
+def stackelberg_nash_equilibrium(leader_payoffs, follower_payoffs):
+    # initialize the game
+    game = nash.Game(leader_payoffs, follower_payoffs)
+
+    # Find the Stackelberg equilibrium using the support enumeration algorithm
+    stackelberg_equilibria = list(game.support_enumeration())
+
+    # Extract the probabilities of the leader and the strategy of the follower
+    leader_probabilities, follower_strategy = stackelberg_equilibria[0]
+
+    return follower_strategy

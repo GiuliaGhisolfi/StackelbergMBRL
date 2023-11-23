@@ -11,28 +11,42 @@ WALLS_MAP = {
 
 class PolicyAgent():
     def __init__(self, transition_matrix_initial_state):
-        self.policy = dict() # {walls[-,-,-]: probability distribution over actions}
+        self.policy = dict() # {state number: probability distribution over actions}
+        self.states_space = dict() # {state number: walls[-,-,-]}
 
-        action = self.__compute_fitizial_first_action(transition_matrix_initial_state)
-        self.update_policy(action=action, transition_matrix=transition_matrix_initial_state)
+        self.__compute_fitizial_first_action(transition_matrix_initial_state)
+        self.update_policy(action=self.fittizial_first_action, 
+            transition_matrix=transition_matrix_initial_state)
     
     def update_policy(self, action, transition_matrix):
         not_walls = self.__compute_walls_from_transition_matrix(action, transition_matrix)
-        if not_walls not in self.policy.keys():
-            self.policy[not_walls] = not_walls / np.sum(not_walls)
-        else:
-            # update policy using idk what but consider reward
+        
+        if [(not_walls == w).all() for w in self.states_space.values()]:
+            # TODO: update policy using idk what but consider rewards
             pass
+        else:
+            self.states_space[len(self.states_space)] = not_walls
+            self.policy[len(self.policy)] = not_walls / np.sum(not_walls)
     
     def compute_next_action(self, action, transition_matrix):
-        not_walls = self.__update_state_space(action, transition_matrix)
-        return np.random.choice(ACTIONS_LIST, p=self.policy[not_walls])
+        state_number = self.__update_states_space(action, transition_matrix)
+        action_agent_pov = np.random.choice(ACTIONS_LIST, p=self.policy[state_number])
+        
+        # map action from agent's point of view to environment's point of view
+        return np.where(WALLS_MAP[action] == action_agent_pov)[0][0] #FIXME
     
-    def __update_state_space(self, action, transition_matrix):
+    def reset_at_initial_state(self, transition_matrix_initial_state):
+        action = self.__compute_fitizial_first_action(transition_matrix_initial_state)
+        self.update_policy(action=action, transition_matrix=transition_matrix_initial_state)
+    
+    def __update_states_space(self, action, transition_matrix):
         not_walls = self.__compute_walls_from_transition_matrix(action, transition_matrix)
-        if not_walls not in self.policy.keys():
-            self.policy[not_walls] = not_walls / np.sum(not_walls)
-        return not_walls
+        if not [(not_walls == w).all() for w in self.states_space.values()]:
+            self.states_space[len(self.states_space)] = not_walls
+            self.policy[len(self.states_space)] = not_walls / np.sum(not_walls)
+        for state_number, walls in self.states_space.items():
+            if (not_walls == walls).all():
+                return state_number
     
     def __compute_walls_from_transition_matrix(self, action, transition_matrix):
         # compute walls from the agent's point of view: 0 if there is a wall, 1 otherwise
@@ -46,4 +60,4 @@ class PolicyAgent():
     def __compute_fitizial_first_action(self, transition_matrix_initial_state):
         # compute a fitizial action to possibly arrive in initial state
         possible_actions = np.sum(transition_matrix_initial_state, axis=0)
-        return np.random.choice(np.where(possible_actions != 0)[0])
+        self.fittizial_first_action = np.random.choice(np.where(possible_actions != 0)[0])

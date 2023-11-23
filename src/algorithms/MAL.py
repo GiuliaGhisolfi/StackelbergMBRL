@@ -26,7 +26,7 @@ class MAL(Agent):
 
 def optimize_policy(policy, model, env):
     # optimize policy massimizing reward given the model
-    policy = argmax
+    #policy = argmax
     return policy
 
 def improve_model(model, policy, data_buffer, beta):
