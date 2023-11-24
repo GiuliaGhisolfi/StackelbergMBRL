@@ -4,15 +4,23 @@ from keras.losses import KLDivergence
 from src.agents.model_agent import ModelAgent
 from src.agents.policy_agent import PolicyAgent
 from src.environment.environment import Environment
-from src.algorithms.utils import executing_policy, stackelberg_nash_equilibrium
+from src.algorithms.utils import stackelberg_nash_equilibrium
 
 ACTION_LIST = [0, 1, 2, 3] # [up, down, left, right]
 
 def compute_model_loss(transition_probability_model, transition_probability_data):
+    # compute loss between transition_probability_model and transition_probability_data
+    #FIXME: compute loss only on non-zero elements of transition_probability_data (q) 
+    # and corresponding elements of transition_probability_model (p)
+    # poi ricordarsi di sostituire in modo che in q tutte le righe sommino a 1
+    y_true = transition_probability_model[~np.all(transition_probability_data == 0, axis=1)]
+    y_pred = transition_probability_data[~np.all(transition_probability_data == 0, axis=1)]
+
     kl_divergence = compute_kl_divergence(
         y_true=transition_probability_model, 
         y_pred=transition_probability_data
         )
+    
     loss = kl_divergence.sum() # sum over all actions
     return loss
 
@@ -83,7 +91,7 @@ class PAL():
 
             # collect data executing policy in the environment
             for _ in range(self.n_episodes_per_iteration):
-                episode = executing_policy(self.policy_agent, self.env, self.max_epochs_per_episode)
+                episode = self.executing_policy()
                 data_buffer.append(episode)
                 self.reset_at_initial_state() # reset environment and agent state
             
@@ -96,6 +104,45 @@ class PAL():
             #TODO: add stopping criterion == convergence at nash equilibrium
             if self.__check_stackelberg_nash_equilibrium():
                 break
+        
+    def executing_policy(self):
+        """
+        Execute policy in the environment to collect data
+
+        Args:
+            agent (PolicyAgent)
+            env (Environment)
+
+        Returns:
+            list os steps: [(state, action, reward, next_state), ...]
+        """
+
+        current_state = self.env.state
+        current_state_coord = self.env.coordinates_from_state(self.env.state)
+        action = self.policy_agent.fittizial_first_action
+        episode = [] # init
+
+        for _ in range(self.max_epochs_per_episode):
+            # select action from policy
+            action = self.policy_agent.compute_next_action(action=action, 
+                        transition_matrix=self.env.p[:, current_state, :])
+
+            # compute step in environment
+            next_state, reward, _, _, _ = self.env.step(action) # netx_state: numeric
+
+            # save step in episode
+            episode.append((current_state_coord, action, reward, self.env.coordinates_from_state(next_state)))
+
+            # update current state
+            current_state = next_state
+            current_state_coord = self.env.coordinates_from_state(next_state)
+            
+            # check if terminal state is reached
+            if current_state == self.env.terminal_state:
+                break
+            
+        return episode
+    
 
     def __optimize_model(self, data_buffer):
         # build model given data_buffer
@@ -108,7 +155,7 @@ class PAL():
 
         for i, episode in enumerate(data_buffer):
             q = self.__compute_transition_probability_from_episode(episode)
-            p = self.__comunpute_transition_probability_from_model(self.model_agent.transition_distribuition)
+            p = self.__comunpute_transition_probability_from_model()
             local_loss = compute_model_loss(
                 transition_probability_model=p,
                 transition_probability_data=q)
@@ -123,23 +170,27 @@ class PAL():
     def __compute_transition_probability_from_episode(self, episode):
         # compute transition probability from episode
         # episode = [(state, action, reward, next_state), ...]
-        states_space_dim = len(self.states_space)
-        q = np.zeros(states_space_dim, len(ACTION_LIST))
+        self.states_model_space_dim = len(self.states_space)
+        
         for state, action, reward, next_state in episode:
             if state not in self.states_space.keys():
-                states_space_dim += 1
-                self.states_space[state] = states_space_dim-1
+                self.states_model_space_dim += 1
+                self.states_space[state] = self.states_model_space_dim-1
+                
+        q = np.zeros((self.states_model_space_dim, len(ACTION_LIST)))
+        for state, action, reward, next_state in episode:
             q[self.states_space[state], action] += 1
             #TODO: update netx_state_function and reward_function ?
-        q /= np.sum(q, axis=1)
-        return q
+        q /= np.sum(q, axis=1)[:, None]
+        q[np.isnan(q)] = 0 # if 0/0, then 0
+        return q #FIXME: TUTTE LE RIGHE DI Q DEVONO SOMMARE A 1
     
-    def __comunpute_transition_probability_from_model(self, transition_distribuition):
+    def __comunpute_transition_probability_from_model(self):
         # compute transition probability from model
         # transition_distribuition = {state: probability distribution over actions}
-        p = np.zeros(len(self.states_space_dim), len(ACTION_LIST))
-        for state, action in transition_distribuition.keys():
-            p[state, action] = transition_distribuition[state, action]
+        p = np.zeros((self.states_model_space_dim, len(ACTION_LIST)))
+        for state, actions_distribuition in self.model_agent.transition_distribuition.items():
+            p[state, :] = actions_distribuition
         return p
     
     def __improve_policy(self):
@@ -148,6 +199,7 @@ class PAL():
         self.policy_agent.policy += self.lr * gradient
 
     def __compute_cost_function_gradient(self):
+        #TODO
         pass
 
     def __check_stackelberg_nash_equilibrium(self):

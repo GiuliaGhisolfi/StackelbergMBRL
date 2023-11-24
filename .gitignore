@@ -3,3 +3,4 @@ src/algorithms/__pycache__
 src/agents/__pycache__
 src/environment/__pycache__
 dummy.ipynb
+TD_learning0.py
