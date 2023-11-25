@@ -10,9 +10,6 @@ ACTION_LIST = [0, 1, 2, 3] # [up, down, left, right]
 
 def compute_model_loss(transition_probability_model, transition_probability_data):
     # compute loss between transition_probability_model and transition_probability_data
-    #FIXME: compute loss only on non-zero elements of transition_probability_data (q) 
-    # and corresponding elements of transition_probability_model (p)
-    # poi ricordarsi di sostituire in modo che in q tutte le righe sommino a 1
     y_true = transition_probability_model[~np.all(transition_probability_data == 0, axis=1)]
     y_pred = transition_probability_data[~np.all(transition_probability_data == 0, axis=1)]
 
@@ -101,7 +98,7 @@ class PAL():
             # improve policy
             self.policy_agent.policy = self.__improve_policy()
 
-            #TODO: add stopping criterion == convergence at nash equilibrium
+            # stopping criteria: stop in nash equilibrium
             if self.__check_stackelberg_nash_equilibrium():
                 break
         
@@ -155,7 +152,8 @@ class PAL():
 
         for i, episode in enumerate(data_buffer):
             q = self.__compute_transition_probability_from_episode(episode)
-            p = self.__comunpute_transition_probability_from_model()
+            p = self.__compute_transition_probability_from_model() #FIXME: non è una distribuzione di probabilità
+            p, q = self.__q_as_a_distribution(p, q)
             local_loss = compute_model_loss(
                 transition_probability_model=p,
                 transition_probability_data=q)
@@ -183,15 +181,26 @@ class PAL():
             #TODO: update netx_state_function and reward_function ?
         q /= np.sum(q, axis=1)[:, None]
         q[np.isnan(q)] = 0 # if 0/0, then 0
-        return q #FIXME: TUTTE LE RIGHE DI Q DEVONO SOMMARE A 1
+        return q
     
-    def __comunpute_transition_probability_from_model(self):
+    def __compute_transition_probability_from_model(self):
         # compute transition probability from model
         # transition_distribuition = {state: probability distribution over actions}
         p = np.zeros((self.states_model_space_dim, len(ACTION_LIST)))
         for state, actions_distribuition in self.model_agent.transition_distribuition.items():
-            p[state, :] = actions_distribuition
-        return p
+            p[state, :] = actions_distribuition 
+            #FIXME: non da qua, modello e matrice di transizione si annulla ad ogni episodio, 
+            # sistemare salvanto p dopo ogni episodio prima di reset model
+        return p #FIXME: non è una distribuzione di probabilità
+    
+    def __q_as_a_distribution(self, p, q):
+        # for rows of q that are all zeros, replace them with the corresponding rows of p
+        # so that q is a probability distribution over actions
+        for i in range(len(q)):
+            if np.all(q[i] == 0):
+                q[i] = p[i]
+        return p, q
+
     
     def __improve_policy(self):
         # improve policy given transition_distribuition
