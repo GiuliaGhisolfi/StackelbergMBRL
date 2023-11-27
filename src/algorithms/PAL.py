@@ -10,20 +10,17 @@ ACTION_LIST = [0, 1, 2, 3] # [up, down, left, right]
 
 def compute_model_loss(transition_probability_model, transition_probability_data):
     # compute loss between transition_probability_model and transition_probability_data
-    y_true = transition_probability_model[~np.all(transition_probability_data == 0, axis=1)]
-    y_pred = transition_probability_data[~np.all(transition_probability_data == 0, axis=1)]
-
     kl_divergence = compute_kl_divergence(
         y_true=transition_probability_model, 
         y_pred=transition_probability_data
         )
-    
     loss = kl_divergence.sum() # sum over all actions
     return loss
 
 def compute_kl_divergence(y_true, y_pred):
     # compute KL divergence between y_true and y_pred
     kl_divergence = KLDivergence()
+    # TODO: controll + raise error or something if kl is negative
     return kl_divergence(y_true, y_pred).numpy()
 
 
@@ -54,21 +51,30 @@ class PAL():
         self.policy_agent = PolicyAgent(
             transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :]
             )
+        
+        # initialize states space with initial state
+        self.states_space = self.model_agent.states_space # {state_coord: state_number}
+        self.p = np.array(self.model_agent.transition_distribuition[
+            self.model_agent.agent_state]) # transition probability matrix
     
     def train(self):
+        # train loop over n_environments environments
         for _ in range(self.n_environments):
             # train loop for the environment
             self.__train_loop_for_the_environment()
 
             #TODO: save policy in json file every n iterations, idk how many
 
-            # initialize environment and model agent
+            # reset and initialize new environment and model agent
             self.env.reset_environment()
             self.model_agent.reset_agent()
 
+            # reset states space and transition probability matrix p
+            self.states_space = self.model_agent.states_space # {state_coord: state_number}
+            self.p = np.array(self.model_agent.transition_distribuition[self.model_agent.agent_state])
+
             # reset policy agent at initial state
-            self.policy_agent.reset_at_initial_state(
-                transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :])
+            self.policy_agent.reset_at_initial_state()
 
         # save final policy in json file
         json.dump(self.policy_agent.policy, open('../policy/policy.json', 'w'))
@@ -93,7 +99,10 @@ class PAL():
                 self.reset_at_initial_state() # reset environment and agent state
             
             # build policy-specific model
-            self.model_agent.transition_distribuition = self.__optimize_model(data_buffer)
+            p = np.array(list(self.model_agent.transition_distribuition.values())) # transition probability matrix
+            q_optimal, self.states_space = self.__optimize_model(data_buffer, p)
+            self.model_agent.transition_distribuition = {i: q_optimal[i] for i in range(len(q_optimal))}
+            self.model_agent.states_space = self.states_space
             
             # improve policy
             self.policy_agent.policy = self.__improve_policy()
@@ -125,7 +134,7 @@ class PAL():
                         transition_matrix=self.env.p[:, current_state, :])
 
             # compute step in environment
-            next_state, reward, _, _, _ = self.env.step(action) # netx_state: numeric
+            next_state, reward, _, _, _ = self.env.step(action) # next_state: numeric
 
             # save step in episode
             episode.append((current_state_coord, action, reward, self.env.coordinates_from_state(next_state)))
@@ -141,58 +150,63 @@ class PAL():
         return episode
     
 
-    def __optimize_model(self, data_buffer):
-        # build model given data_buffer
+    def __optimize_model(self, data_buffer, p):
+        # build optimal model from experience using episode saved in data_buffer: 
+        # optimal model is the one that minimize the loss between current model and
+        # the model approximated from data_buffer
+
+        # update transitional matrix P and states space S
+        #
         # minimizzo KL div tra modello precedente (matrice di transizione P) e 
         # approx del modello ricavata dai dati (matrice Q di approx di P dagli episodi in data_buffer)
-        loss = np.inf
-        self.kl_divergence = []
-        self.optimal_model = -1
-        self.states_space = self.model_agent.states_space
+
+        loss = np.inf # model loss: kl divergence between model and data transition probability
+        self.kl_divergence = [] # list of kl divergence between model and data
+        self.optimal_model = -1 # optimal model index in data_buffer, to check if I'm in nash equilibrium
+
+        q_optimal = np.empty((0, len(ACTION_LIST))) # init data transition probability as an empty array
+        optimal_sates_space = dict() # init optimal states space
 
         for i, episode in enumerate(data_buffer):
-            q = self.__compute_transition_probability_from_episode(episode)
-            p = self.__compute_transition_probability_from_model() #FIXME: non è una distribuzione di probabilità
+            q, temp_state_space = self.__compute_transition_probability_from_episode(episode)
             p, q = self.__q_as_a_distribution(p, q)
+
             local_loss = compute_model_loss(
                 transition_probability_model=p,
                 transition_probability_data=q)
             if local_loss < loss:
                 loss = local_loss
-                p = q
+                q_optimal = q
                 self.optimal_model = i
+                optimal_sates_space = temp_state_space
             self.kl_divergence.append(local_loss) # in [0, +inf]
 
-        return p
+        return q_optimal, optimal_sates_space
     
     def __compute_transition_probability_from_episode(self, episode):
         # compute transition probability from episode
         # episode = [(state, action, reward, next_state), ...]
-        self.states_model_space_dim = len(self.states_space)
-        
+
+        states_model_space_dim = len(self.states_space)
+        temp_states_space = self.states_space.copy()
+
         for state, action, reward, next_state in episode:
-            if state not in self.states_space.keys():
-                self.states_model_space_dim += 1
-                self.states_space[state] = self.states_model_space_dim-1
+            if state not in temp_states_space.keys():
+                # add new visited state to states space
+                temp_states_space[state] = states_model_space_dim 
+                states_model_space_dim += 1
                 
-        q = np.zeros((self.states_model_space_dim, len(ACTION_LIST)))
+        q = np.zeros((states_model_space_dim, len(ACTION_LIST)))
+
         for state, action, reward, next_state in episode:
-            q[self.states_space[state], action] += 1
+            q[temp_states_space[state], action] += 1
             #TODO: update netx_state_function and reward_function ?
+
         q /= np.sum(q, axis=1)[:, None]
         q[np.isnan(q)] = 0 # if 0/0, then 0
-        return q
-    
-    def __compute_transition_probability_from_model(self):
-        # compute transition probability from model
-        # transition_distribuition = {state: probability distribution over actions}
-        p = np.zeros((self.states_model_space_dim, len(ACTION_LIST)))
-        for state, actions_distribuition in self.model_agent.transition_distribuition.items():
-            p[state, :] = actions_distribuition 
-            #FIXME: non da qua, modello e matrice di transizione si annulla ad ogni episodio, 
-            # sistemare salvanto p dopo ogni episodio prima di reset model
-        return p #FIXME: non è una distribuzione di probabilità
-    
+
+        return q, temp_states_space
+
     def __q_as_a_distribution(self, p, q):
         # for rows of q that are all zeros, replace them with the corresponding rows of p
         # so that q is a probability distribution over actions

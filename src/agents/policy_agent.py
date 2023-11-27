@@ -12,7 +12,7 @@ WALLS_MAP = {
 class PolicyAgent():
     def __init__(self, transition_matrix_initial_state: np.ndarray):
         self.policy = dict() # {state number: probability distribution over actions}
-        self.states_space = dict() # {state number: walls[-,-,-]}
+        self.states_space = dict() # {state number: walls[-,-,-,-]}
 
         self.__compute_fitizial_first_action(transition_matrix_initial_state)
         self.update_policy(action=self.fittizial_first_action, 
