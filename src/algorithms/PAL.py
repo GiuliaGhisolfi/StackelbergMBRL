@@ -100,9 +100,13 @@ class PAL():
             
             # build policy-specific model
             p = np.array(list(self.model_agent.transition_distribuition.values())) # transition probability matrix
-            q_optimal, self.states_space = self.__optimize_model(data_buffer, p)
+            q_optimal, self.states_space, optimal_reward_function, optimal_next_state_function = \
+                self.__optimize_model(data_buffer, p)
             self.model_agent.transition_distribuition = {i: q_optimal[i] for i in range(len(q_optimal))}
             self.model_agent.states_space = self.states_space
+            self.model_agent.next_state_function = optimal_next_state_function
+            self.model_agent.reward_function = optimal_reward_function
+
             
             # improve policy
             self.policy_agent.policy = self.__improve_policy()
@@ -168,7 +172,8 @@ class PAL():
         optimal_sates_space = dict() # init optimal states space
 
         for i, episode in enumerate(data_buffer):
-            q, temp_state_space = self.__compute_transition_probability_from_episode(episode)
+            q, temp_state_space, temp_reward_function, temp_next_state_function = \
+                self.__compute_transition_probability_from_episode(episode)
             p, q = self.__q_as_a_distribution(p, q)
 
             local_loss = compute_model_loss(
@@ -179,16 +184,21 @@ class PAL():
                 q_optimal = q
                 self.optimal_model = i
                 optimal_sates_space = temp_state_space
+                optimal_next_state_function = temp_next_state_function
+                optimal_reward_function = temp_reward_function
             self.kl_divergence.append(local_loss) # in [0, +inf]
 
-        return q_optimal, optimal_sates_space
+        return q_optimal, optimal_sates_space, optimal_reward_function, optimal_next_state_function
     
     def __compute_transition_probability_from_episode(self, episode):
         # compute transition probability from episode
         # episode = [(state, action, reward, next_state), ...]
 
         states_model_space_dim = len(self.states_space)
+
         temp_states_space = self.states_space.copy()
+        temp_next_state_function = self.model_agent.next_state_function.copy()
+        temp_reward_function = self.model_agent.reward_function.copy()
 
         for state, action, reward, next_state in episode:
             if state not in temp_states_space.keys():
@@ -200,12 +210,13 @@ class PAL():
 
         for state, action, reward, next_state in episode:
             q[temp_states_space[state], action] += 1
-            #TODO: update netx_state_function and reward_function ?
+            temp_next_state_function[(temp_states_space[state], action)] = temp_states_space[next_state]
+            temp_reward_function[(temp_states_space[state], action)] = reward
 
         q /= np.sum(q, axis=1)[:, None]
         q[np.isnan(q)] = 0 # if 0/0, then 0
 
-        return q, temp_states_space
+        return q, temp_states_space, temp_reward_function, temp_next_state_function
 
     def __q_as_a_distribution(self, p, q):
         # for rows of q that are all zeros, replace them with the corresponding rows of p
@@ -214,7 +225,6 @@ class PAL():
             if np.all(q[i] == 0):
                 q[i] = p[i]
         return p, q
-
     
     def __improve_policy(self):
         # improve policy given transition_distribuition

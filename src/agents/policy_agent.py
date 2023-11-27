@@ -13,6 +13,7 @@ class PolicyAgent():
     def __init__(self, transition_matrix_initial_state: np.ndarray):
         self.policy = dict() # {state number: probability distribution over actions}
         self.states_space = dict() # {state number: walls[-,-,-,-]}
+        # TODO: possono diventare due matrici/ un dizionario solo mettendo walls in una tupla
 
         self.__compute_fitizial_first_action(transition_matrix_initial_state)
         self.update_policy(action=self.fittizial_first_action, 

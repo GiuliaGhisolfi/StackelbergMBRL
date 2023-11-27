@@ -12,11 +12,11 @@ class ModelAgent(Agent):
 
         # initialize model
         self.agent_state = 0 # initial state
-        self.transition_distribuition = dict() # P(A|S)
+        self.transition_distribuition = dict() # P(A|S) #TODO: può diventare una matrice
         self.__update_actions_distribuition(transition_matrix_initial_state)
         self.next_state_function = dict()
         self.reward_function = dict()
-        self.states_space = dict() # S
+        self.states_space = dict() # S: {(x,y): state number}
         self.__update_states_space(initial_state_coord)
     
     def step(self, action, reward, next_state_coord):
@@ -42,7 +42,8 @@ class ModelAgent(Agent):
                 transition_matrix != 0)[1] else 1 for i in range(N_ACTIONS)]
             self.transition_distribuition[self.agent_state] /= np.sum(
                 self.transition_distribuition[self.agent_state])
-        
+
+    #TODO: valutare se queste le uso o basta l'aggiornamento da PAL  
     def __update_next_state_function(self, state, action, next_state):
         # S, A -> S': deterministica
         self.next_state_function[(state, action)] = next_state
