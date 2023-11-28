@@ -1,5 +1,5 @@
 import numpy as np
-from src.agent import Agent
+from src.agents.agent import Agent
 
 N_ACTIONS = 4
 ACTIONS_LIST = [0, 1, 2, 3] # [up, down, left, right]
@@ -8,18 +8,19 @@ ACTIONS_LIST = [0, 1, 2, 3] # [up, down, left, right]
 class ModelAgent(Agent):
     # ricreo environment con modello approssimato
     def __init__(self, gamma, initial_state_coord, transition_matrix_initial_state):
-        super().__init__(gamma=gamma, initial_state_coord=initial_state_coord)
+        super().__init__(initial_state_coord=initial_state_coord)
 
         # initialize model
+        self.gamma = gamma # discount factor
         self.agent_state = 0 # initial state
-        self.transition_distribuition = dict() # P(A|S) #TODO: può diventare una matrice
+        self.transition_distribuition = [] # P(A|S) transition_distribuition[state] = probability distribution over actions
         self.__update_actions_distribuition(transition_matrix_initial_state)
         self.next_state_function = dict()
         self.reward_function = dict()
         self.states_space = dict() # S: {(x,y): state number}
         self.__update_states_space(initial_state_coord)
     
-    def step(self, action, reward, next_state_coord):
+    def step(self, action, reward, next_state_coord): #TODO: togliere se non viene usato
         self.__update_states_space(state_coord=next_state_coord)
         next_state = self.states_space[next_state_coord]
 
@@ -37,13 +38,12 @@ class ModelAgent(Agent):
     
     def __update_actions_distribuition(self, transition_matrix):
         # P(A|S)
-        if self.agent_state not in self.transition_distribuition.keys():
-            self.transition_distribuition[self.agent_state] = [0 if i not in np.where(
-                transition_matrix != 0)[1] else 1 for i in range(N_ACTIONS)]
+        if self.agent_state not in range(len(self.transition_distribuition)):
+            self.transition_distribuition.append(np.array([0 if i not in np.where(
+                transition_matrix != 0)[1] else 1 for i in range(N_ACTIONS)], dtype=np.float64))
             self.transition_distribuition[self.agent_state] /= np.sum(
                 self.transition_distribuition[self.agent_state])
 
-    #TODO: valutare se queste le uso o basta l'aggiornamento da PAL  
     def __update_next_state_function(self, state, action, next_state):
         # S, A -> S': deterministica
         self.next_state_function[(state, action)] = next_state
@@ -56,4 +56,15 @@ class ModelAgent(Agent):
         # state_coord from environment: (x,y) -> state in S
         if state_coord not in self.states_space.keys():
             self.states_space[state_coord] = self.agent_state
+    
+    def __compute_reward_function(self, episode):
+        """
+        Compute cumulative reward from the episode
+        episode = [(state, action, reward, next_state), ...]
+        """
+        T = len(episode) # number of steps to reach terminal state from current state
+        if T == 1:
+            return episode[0][2] # reward of the final step
+        else:
+            return sum([self.gamma**t * self.__compute_reward_function(episode[1:]) for t in range(T)]) # recursive call
     

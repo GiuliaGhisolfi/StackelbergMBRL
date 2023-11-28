@@ -1,5 +1,5 @@
 import numpy as np
-from src.agent import Agent
+from src.agents.agent import Agent
 
 N_ACTIONS = 4
 ACTIONS_LIST = [0, 1, 2, 3] # [up, down, left, right]

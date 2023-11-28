@@ -10,10 +10,10 @@ WALLS_MAP = {
 }
 
 class PolicyAgent():
-    def __init__(self, transition_matrix_initial_state: np.ndarray):
-        self.policy = dict() # {state number: probability distribution over actions}
+    def __init__(self, gamma:float, transition_matrix_initial_state:np.ndarray):
+        self.policy = [] # policy[state number] = probability distribution over actions
         self.states_space = dict() # {state number: walls[-,-,-,-]}
-        # TODO: possono diventare due matrici/ un dizionario solo mettendo walls in una tupla
+        self.gamma = gamma # discount factor
 
         self.__compute_fitizial_first_action(transition_matrix_initial_state)
         self.update_policy(action=self.fittizial_first_action, 
@@ -28,25 +28,22 @@ class PolicyAgent():
             action (int): action taken by the agent
             transition_matrix (np.ndarray): transition matrix of the environment
         """
-        not_walls = self.__compute_walls_from_transition_matrix(action, transition_matrix)
-        update = False
+        not_walls = self.compute_walls_from_transition_matrix(action, transition_matrix)
 
-        for w in self.states_space.values():
-            if np.array_equal(not_walls, w):
-                # TODO: update policy using idk what but consider rewards
-                update = True
-                break
-        if not update:
+        if not_walls in np.array(self.states_space.values()):
+            pass
+            # TODO: update policy using idk what but consider rewards
+        else:
             self.states_space[len(self.states_space)] = not_walls
-            self.policy[len(self.policy)] = not_walls / np.sum(not_walls)
+            self.policy.append(not_walls / np.sum(not_walls))
 
-    def get_state_number(self, action: int, transition_matrix: np.ndarray):
-        not_walls = self.__compute_walls_from_transition_matrix(action, transition_matrix)
+    def get_state_number(self, action:int, transition_matrix:np.ndarray):
+        not_walls = self.compute_walls_from_transition_matrix(action, transition_matrix)
         for state_number, walls in self.states_space.items():
             if np.array_equal(not_walls, walls):
                 return state_number
     
-    def compute_next_action(self, action: int, transition_matrix: np.ndarray):
+    def compute_next_action(self, action:int, transition_matrix:np.ndarray):
         self.__update_states_space(action, transition_matrix)
         state_number = self.get_state_number(action, transition_matrix)
         action_agent_pov = np.random.choice(ACTIONS_LIST, p=self.policy[state_number])
@@ -54,7 +51,7 @@ class PolicyAgent():
         # map action from agent's point of view to environment's point of view
         return WALLS_MAP[action][action_agent_pov]
     
-    def reset_at_initial_state(self, transition_matrix_initial_state: np.ndarray):
+    def reset_at_initial_state(self, transition_matrix_initial_state:np.ndarray):
         self.__compute_fitizial_first_action(transition_matrix_initial_state)
         self.update_policy(action=self.fittizial_first_action, 
             transition_matrix=transition_matrix_initial_state)
@@ -67,26 +64,25 @@ class PolicyAgent():
             action (int): action taken by the agent
             transition_matrix (np.ndarray): transition matrix of the environment
         """
-        not_walls = self.__compute_walls_from_transition_matrix(action, transition_matrix)
-        update = True
-        for w in self.states_space.values():
-            if np.array_equal(not_walls, w):
-                update = False
-                break
-        if update:
+        not_walls = self.compute_walls_from_transition_matrix(action, transition_matrix)
+
+        if not_walls not in np.array(self.states_space.values()):
             self.states_space[len(self.states_space)] = not_walls
-            self.policy[len(self.policy)] = not_walls / np.sum(not_walls)
+            self.policy.append(not_walls / np.sum(not_walls))
     
-    def __compute_walls_from_transition_matrix(self, action:int, transition_matrix:np.ndarray):
+    def compute_walls_from_transition_matrix(self, action:int, transition_matrix:np.ndarray):
         # compute walls from the agent's point of view: 0 if there is a wall, 1 otherwise
         # wall 0: agent's left
         # wall 1: agent's below
         # wall 2: agent's right
         # wall 3: agent's above
-        env_not_walls = np.sum(transition_matrix, axis=0)
-        return env_not_walls[WALLS_MAP[action]]
+        if len(transition_matrix.shape) > 1:
+            env_not_walls = np.sum(transition_matrix, axis=0)
+        else:
+            env_not_walls = transition_matrix
+        return np.array([0 if i==0 else 1 for i in env_not_walls[WALLS_MAP[action]]])
     
-    def __compute_fitizial_first_action(self, transition_matrix_initial_state: np.ndarray):
+    def __compute_fitizial_first_action(self, transition_matrix_initial_state:np.ndarray):
         # compute a fitizial action to possibly arrive in initial state
         no_walls = np.sum(transition_matrix_initial_state, axis=0)
         first_action_map = {

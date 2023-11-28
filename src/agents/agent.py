@@ -2,24 +2,12 @@ import pygame
 
 
 class Agent():
-    def __init__(self, gamma, initial_state_coord):
-        self.gamma = gamma # discount factor
+    def __init__(self, initial_state_coord):
         self.agent_state_coord = initial_state_coord
         
         self.path = [self.agent_state_coord] # list of states visited by agent
         self.line_path = [] # list of lines to draw path
 
-    def __compute_reward_function(self, episode): #TODO: spostare 
-        """
-        Compute cumulative reward from the episode
-        episode = [(state, action, reward, next_state), ...]
-        """
-        T = len(episode) # number of steps to reach terminal state from current state
-        if T == 1:
-            return episode[0][2] # reward of the final step
-        else:
-            return sum([self.gamma**t * self.__compute_reward_function(episode[1:]) for t in range(T)]) # recursive call
-    
     def reset(self):
         self.agent_state_coord = self.path[0]
         self.path = [self.agent_state_coord]
