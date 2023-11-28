@@ -1,28 +1,11 @@
 import numpy as np
 import json
-from keras.losses import KLDivergence
 from src.agents.model_agent import ModelAgent
 from src.agents.policy_agent import PolicyAgent
 from src.environment.environment import Environment
-from src.algorithms.utils import stackelberg_nash_equilibrium
+from src.algorithms.utils import stackelberg_nash_equilibrium, compute_model_loss, compute_kl_divergence, update_policy_fixed_steps
 
 ACTION_LIST = [0, 1, 2, 3] # [up, down, left, right]
-
-def compute_model_loss(transition_probability_model, transition_probability_data):
-    # compute loss between transition_probability_model and transition_probability_data
-    kl_divergence = compute_kl_divergence(
-        y_true=transition_probability_model, 
-        y_pred=transition_probability_data
-        )
-    loss = kl_divergence.sum() # sum over all actions
-    return loss
-
-def compute_kl_divergence(y_true, y_pred):
-    # compute KL divergence between y_true and y_pred
-    kl_divergence = KLDivergence()
-    # TODO: controll + raise error or something if kl is negative
-    return kl_divergence(y_true, y_pred).numpy()
-
 
 class PAL():
     # PAL: Policy As Leader Algorithm
