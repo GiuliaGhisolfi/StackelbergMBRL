@@ -61,11 +61,11 @@ class PAL():
             # reset policy agent at initial state
             self.policy_agent.reset_at_initial_state(transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :])
 
-        # save final policy and policy states space in json file
-        with open('../policy/policy.json', 'w') as policy_file:
-            policy_file.write(json.dumps(self.policy_agent.policy, indent=4))
-        with open('../policy/states_space.json', 'w') as policy_file:
-            policy_file.write(json.dumps(self.policy_agent.states_space, indent=4))
+        # save final policy and policy states space in json file #TODO: capire come salvare policy
+        #with open('src/saved_policy/PAL_policy.json', 'w') as policy_file:
+            #json.dump(self.policy_agent.policy, policy_file)
+        #with open('src/saved_policy/PAL_states_space.json', 'w') as states_space_file:
+            #json.dump(self.policy_agent.states_space, states_space_file)
     
     def reset_at_initial_state(self):
         # reset agent's position in the environment
@@ -89,13 +89,14 @@ class PAL():
             # compute parameters to optimize model and improve policy
             p = np.array(self.model_agent.transition_distribuition) # transition probability matrix
             q_optimal, states_space_model, optimal_reward_function, optimal_next_state_function, \
-                policy, states_space_policy = self.__optimize_model_improve_policy(data_buffer, p)
+                optimal_value_function, policy, states_space_policy = self.__optimize_model_improve_policy(data_buffer, p)
             
             # build policy-specific model
             self.model_agent.transition_distribuition = q_optimal
             self.model_agent.states_space = states_space_model
             self.model_agent.next_state_function = optimal_next_state_function
             self.model_agent.reward_function = optimal_reward_function
+            self.model_agent.values_function = optimal_value_function
             
             # improve policy
             self.policy_agent.policy = policy 
@@ -160,6 +161,7 @@ class PAL():
 
         q_optimal = np.empty((0, len(ACTION_LIST))) # init data transition probability as an empty array
         optimal_states_space_model = dict() # init optimal states space
+        optimal_value_function = dict() # init optimal value function
 
         # policy parameters
         policy = []
@@ -170,7 +172,7 @@ class PAL():
         # loop over episodes in data buffer
         for i, episode in enumerate(data_buffer):
             # compute model parameters for model optimization
-            q, temp_states_space_model, temp_reward_function, temp_next_state_function = \
+            q, temp_states_space_model, temp_reward_function, temp_next_state_function, temp_value_function = \
                 self.__compute_transition_probability_from_episode(episode)
             q = self.__q_as_a_distribution(p, q)
 
@@ -185,11 +187,12 @@ class PAL():
                 optimal_states_space_model = temp_states_space_model
                 optimal_next_state_function = temp_next_state_function
                 optimal_reward_function = temp_reward_function
+                optimal_value_function = temp_value_function
             self.kl_divergence.append(local_loss) # in [0, +inf]
 
             # compute policy parameters for policy improvement
             temp_policy, temp_states_space_policy = self.__improve_policy_from_episode(episode,
-                transition_distribuition=q, states_space_model=temp_states_space_model)
+                value_function=temp_value_function, states_space_model=temp_states_space_model)
             local_cost_function = self.__compute_cost_function(temp_policy, temp_states_space_policy)
 
             if local_cost_function > cost_function:
@@ -199,7 +202,7 @@ class PAL():
             self.cost_function.append(local_cost_function)
 
         return (q_optimal, optimal_states_space_model, optimal_reward_function, optimal_next_state_function, 
-            policy, states_space_policy)
+            optimal_value_function, policy, states_space_policy)
     
     ###### model optimization ######
     def __compute_transition_probability_from_episode(self, episode):
@@ -217,27 +220,40 @@ class PAL():
         temp_states_space = self.model_agent.states_space.copy()
         temp_next_state_function = self.model_agent.next_state_function.copy()
         temp_reward_function = self.model_agent.reward_function.copy()
+        temp_value_function = self.model_agent.values_function.copy()
 
         for state, action, reward, next_state in episode:
             if state not in temp_states_space.keys():
                 # add new visited state to states space
                 temp_states_space[state] = states_model_space_dim 
+                temp_value_function[states_model_space_dim] = 0 # init value function
                 states_model_space_dim += 1
-                
+
+        # update transition probability matrix 
         q = np.zeros((states_model_space_dim, len(ACTION_LIST)))
 
-        for state, action, reward, next_state in episode:
+        for state, action, reward, next_state in episode: 
             q[temp_states_space[state], action] += 1
             temp_reward_function[(temp_states_space[state], action)] = reward
+
             if next_state in temp_states_space.keys():
                 # not add last state visited in the episode to next state function
-                #TODO: forse la funzione 'temp_next_state_function' si può togliere
                 temp_next_state_function[(temp_states_space[state], action)] = temp_states_space[next_state]
 
         q /= np.sum(q, axis=1)[:, None]
         q[np.isnan(q)] = 0 # if 0/0, then 0
 
-        return q, temp_states_space, temp_reward_function, temp_next_state_function
+        # update value function using TD learning
+        for state, action, reward, next_state in episode:
+            if next_state in temp_states_space.keys():
+                td_error = reward + (self.gamma  * temp_value_function[temp_states_space[next_state]] - 
+                    temp_value_function[temp_states_space[state]])
+            else:
+                td_error = reward - temp_value_function[temp_states_space[state]]
+
+            temp_value_function[temp_states_space[state]] += self.lr * td_error
+
+        return q, temp_states_space, temp_reward_function, temp_next_state_function, temp_value_function
 
     def __q_as_a_distribution(self, p, q):
         """
@@ -257,71 +273,53 @@ class PAL():
         return q
     
     ###### policy improvement ######
-    def __improve_policy_from_episode(self, episode, transition_distribuition, states_space_model):
+    def __improve_policy_from_episode(self, episode, value_function, states_space_model):
         temp_policy = self.policy_agent.policy.copy()
         temp_states_space_policy = self.policy_agent.states_space.copy()
         previous_action = self.policy_agent.fittizial_first_action
             
         for state, action, reward, next_state in episode:
-
-            state_transition_matrix = transition_distribuition[states_space_model[state]]
-            next_state_transition_matrix = transition_distribuition[states_space_model[next_state]]
-
-            temp_policy, temp_states_space_policy = self.__update_policy(temp_policy, temp_states_space_policy, 
-                previous_action, state_transition_matrix, action, reward, next_state_transition_matrix)
+            # transition probability matrix of the environment
+            temp_policy, temp_states_space_policy = self.__update_policy(state, temp_policy, 
+                temp_states_space_policy, previous_action, value_function, states_space_model)
             
             previous_action = action
         
         return temp_policy, temp_states_space_policy
     
-    def __update_policy(self, policy:list, states_space_policy:dict, previous_action:int, state_transition_matrix:np.ndarray, 
-            action:int, reward:float, next_state_transition_matrix:np.ndarray):
+    def __update_policy(self, state, policy:list, states_space_policy:dict, previous_action:int,
+        value_function:dict, states_space_model_model:dict):
         """
         Update given policy with new state if it is not already present in the given states space
         else update policy with new transition matrix and add new state to states space
-        The function implements the TD learning update rule
 
         Args:
             policy (list): policy to update
-            states_space (dict): states space to update
+            states_space_policy (dict): states space to update
             previos_action (int): action taken by the agent to arrive in the current state
-            state_transition_matrix (np.ndarray): transition matrix of the environment
-            action (int): action taken by the agent
-            reward (float): reward received by the agent
-            next_state_transition_matrix (np.ndarray): transition matrix of the environment
 
         Returns:
             policy (list): updated policy
-            states_space (list): updated states space
+            states_space_policy (list): updated states space
         """
-        #TODO: maybe change with q learning? o ottimizzare quando si ha 1! action possibile
         state_not_walls = self.policy_agent.compute_walls_from_transition_matrix(
-            previous_action, state_transition_matrix)
-        next_state_not_walls = self.policy_agent.compute_walls_from_transition_matrix(
-            action, next_state_transition_matrix)
+            previous_action, self.env.p[:, state, :])
 
         # check if state and next_state are already in the states space and get their index
-        state_not_walls_index = [key for key, value in states_space_policy.items() 
+        state_not_walls_index = [key for key, value in states_space_policy.items()
             if np.equal(value, state_not_walls).all()]
-        next_state_not_walls_index = [key for key, value in states_space_policy.items() 
-            if np.equal(value, next_state_not_walls).all()]
-        
-        if len(state_not_walls_index) == 1 and len(next_state_not_walls_index) == 1:
-            # TD learning update rule 
-            td_error = reward + (self.gamma  * policy[next_state_not_walls_index[0]] - policy[state_not_walls_index[0]]) #FIXME
-            policy[state_not_walls_index[0]] += self.lr * td_error  * policy[state_not_walls_index[0]]
-            
-            policy[state_not_walls_index[0]] -= min(policy[state_not_walls_index[0]]) # each action is in [0, 1]
-            policy[state_not_walls_index[0]] /= np.sum(policy[state_not_walls_index[0]]) # sum to 1
-        else:
-            # add new states to states space
-            if len(state_not_walls_index) < 1:
-                states_space_policy[len(states_space_policy)] = state_not_walls
-                policy.append(state_not_walls / np.sum(state_not_walls))
-            if len(next_state_not_walls_index) < 1:
-                states_space_policy[len(states_space_policy)] = next_state_not_walls
-                policy.append(next_state_not_walls / np.sum(next_state_not_walls))
-            
+
+        if len(state_not_walls_index) < 1:
+            #  add new states to states space
+            states_space_policy[len(states_space_policy)] = state_not_walls
+            policy.append(state_not_walls / np.sum(state_not_walls))
+
+        # policy improvement
+        gradient = 0 #FIXME: update using gradient descent (incremental value approximation)
+        policy[state_not_walls_index[0]] += self.lr * gradient
+        policy[state_not_walls_index[0]] -= min(policy[state_not_walls_index[0]]) # each action is in [0, 1]
+        policy[state_not_walls_index[0]] /= np.sum(policy[state_not_walls_index[0]]) # sum to 1
+
         return policy, states_space_policy
     
     def __compute_cost_function(self, policy, states_space):

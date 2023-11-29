@@ -46,7 +46,7 @@ class PolicyAgent():
     def compute_next_action(self, action:int, transition_matrix:np.ndarray):
         self.__update_states_space(action, transition_matrix)
         state_number = self.get_state_number(action, transition_matrix)
-        action_agent_pov = np.random.choice(ACTIONS_LIST, p=self.policy[state_number])
+        action_agent_pov = np.random.choice(ACTIONS_LIST, p=self.policy[state_number]) # relative action
         
         # map action from agent's point of view to environment's point of view
         return WALLS_MAP[action][action_agent_pov]
@@ -76,12 +76,16 @@ class PolicyAgent():
         # wall 0: agent's left
         # wall 1: agent's below
         # wall 2: agent's right
-        # wall 3: agent's above
+        # wall 3: agent's above, always 1
         if len(transition_matrix.shape) > 1:
             env_not_walls = np.sum(transition_matrix, axis=0)
         else:
             env_not_walls = transition_matrix
-        return np.array([0 if i==0 else 1 for i in env_not_walls[WALLS_MAP[action]]]) #FIXME: check if this is correct
+
+        w = np.array([0 if i==0 else 1 for i in env_not_walls[WALLS_MAP[action]]])
+        if w[3] == 0:
+            print("ERROR: agent's above wall is 0") #FIXME: check if this is correct
+        return np.array([0 if i==0 else 1 for i in env_not_walls[WALLS_MAP[action]]])
     
     def __compute_fitizial_first_action(self, transition_matrix_initial_state:np.ndarray):
         # compute a fitizial action to possibly arrive in initial state

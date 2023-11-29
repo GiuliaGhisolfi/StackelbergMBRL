@@ -6,7 +6,7 @@ def compute_model_loss(transition_probability_model, transition_probability_data
     # compute loss between transition_probability_model and transition_probability_data
     kl_divergence = compute_kl_divergence(
         y_true=transition_probability_model, 
-        y_pred=transition_probability_data
+        y_pred=transition_probability_data[:transition_probability_model.shape[0], :]
         )
     loss = kl_divergence.sum() # sum over all actions
     return loss
@@ -14,12 +14,11 @@ def compute_model_loss(transition_probability_model, transition_probability_data
 def compute_kl_divergence(y_true, y_pred):
     # compute KL divergence between y_true and y_pred
     kl_divergence = KLDivergence()
-    # TODO: controll + raise error or something if kl is negative
     return kl_divergence(y_true, y_pred).numpy()
 
 def stackelberg_nash_equilibrium(leader_payoffs, follower_payoffs):
     # initialize the game
-    game = nash.Game([leader_payoffs], [follower_payoffs]) #FIXME
+    game = nash.Game([leader_payoffs], [follower_payoffs])
 
     # Find the Stackelberg equilibrium using the support enumeration algorithm
     stackelberg_equilibria = list(game.support_enumeration())

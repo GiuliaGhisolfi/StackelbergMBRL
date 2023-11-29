@@ -18,6 +18,7 @@ class ModelAgent(Agent):
         self.next_state_function = dict()
         self.reward_function = dict()
         self.states_space = dict() # S: {(x,y): state number}
+        self.values_function = dict() # V: {state: value}
         self.__update_states_space(initial_state_coord)
     
     def step(self, action, reward, next_state_coord): #TODO: togliere se non viene usato
@@ -56,6 +57,7 @@ class ModelAgent(Agent):
         # state_coord from environment: (x,y) -> state in S
         if state_coord not in self.states_space.keys():
             self.states_space[state_coord] = self.agent_state
+            self.values_function[self.agent_state] = 0
     
     def __compute_reward_function(self, episode):
         """
