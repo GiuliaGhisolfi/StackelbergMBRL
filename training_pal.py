@@ -1,15 +1,16 @@
 from src.algorithms.PAL import PAL
 
-def main(alpha, n_environments, max_iterations_per_environment, n_episodes_per_iteration, max_epochs_per_episode, 
-    maze_width, maze_height, gamma):
+def main(learning_rate, n_environments, max_iterations_per_environment, n_episodes_per_iteration, max_epochs_per_episode, 
+    maze_width, maze_height, alpha, gamma):
     pal = PAL(
-        learning_rate=alpha, 
+        learning_rate=learning_rate, 
         n_environments=n_environments,
         max_iterations_per_environment=max_iterations_per_environment,
         n_episodes_per_iteration=n_episodes_per_iteration, 
         max_epochs_per_episode=max_epochs_per_episode, 
         maze_width=maze_width, 
         maze_height=maze_height, 
+        alpha = alpha,
         gamma=gamma)
     
     pal.train()
@@ -26,18 +27,20 @@ if __name__ == '__main__':
 
     # training parameters
     n_environments = 2 # number of different environments to train on
-    max_iterations_per_environment = 2
-    n_episodes_per_iteration = 2 # number of episodes to run for each epoch
+    max_iterations_per_environment = 3
+    n_episodes_per_iteration = 4 # number of episodes to run for each epoch
     max_epochs_per_episode = 600
+    learning_rate = 0.01
 
 
     main(
-        alpha=alpha, 
+        learning_rate=learning_rate, 
         n_environments=n_environments,
         max_iterations_per_environment=max_iterations_per_environment,
         n_episodes_per_iteration=n_episodes_per_iteration, 
         max_epochs_per_episode=max_epochs_per_episode, 
         maze_width=maze_width, 
         maze_height=maze_height, 
+        alpha=alpha,
         gamma=gamma
     )

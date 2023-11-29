@@ -11,13 +11,14 @@ class PAL():
     # PAL: Policy As Leader Algorithm
 
     def __init__(self, learning_rate, n_environments, max_iterations_per_environment, n_episodes_per_iteration, 
-        max_epochs_per_episode, maze_width, maze_height, gamma):
+        max_epochs_per_episode, maze_width, maze_height, alpha, gamma):
 
         self.n_environments = n_environments
         self.max_iterations_per_environment = max_iterations_per_environment
         self.n_episodes_per_iteration = n_episodes_per_iteration
         self.max_epochs_per_episode = max_epochs_per_episode
-        self.lr = learning_rate # alpha
+        self.lr = learning_rate 
+        self.alpha = alpha # alpha
         self.gamma = gamma # discount factor to compute expected cumulative reward
 
         # initalize environment
@@ -36,14 +37,17 @@ class PAL():
             gamma=gamma,
             transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :]
             )
-        
+        print('Agents initialized')
+
         # transition probability matrix
         self.p = self.model_agent.transition_distribuition[
             self.model_agent.agent_state]
     
     def train(self):
         # train loop over n_environments environments
-        for _ in range(self.n_environments):
+        print('Training started')
+        for i in range(self.n_environments):
+            print(f'\nTraining on environment {i+1}/{self.n_environments}')
             # train loop for the environment
             self.__train_loop_for_the_environment()
 
@@ -59,13 +63,15 @@ class PAL():
             self.p = self.model_agent.transition_distribuition[self.model_agent.agent_state]
 
             # reset policy agent at initial state
-            self.policy_agent.reset_at_initial_state(transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :])
+            self.policy_agent.reset_at_initial_state(
+                transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :])
 
-        # save final policy and policy states space in json file #TODO: capire come salvare policy
-        #with open('src/saved_policy/PAL_policy.json', 'w') as policy_file:
-            #json.dump(self.policy_agent.policy, policy_file)
-        #with open('src/saved_policy/PAL_states_space.json', 'w') as states_space_file:
-            #json.dump(self.policy_agent.states_space, states_space_file)
+        # save final policy and policy states space in json file
+        with open('src/saved_policy/PAL_policy.json', 'w') as policy_file:
+            json.dump([row.tolist() for row in self.policy_agent.policy], policy_file)
+        with open('src/saved_policy/PAL_states_space.json', 'w') as states_space_file:
+            json.dump({str(key): value.tolist() for key, value in 
+            self.policy_agent.states_space.items()}, states_space_file)
     
     def reset_at_initial_state(self):
         # reset agent's position in the environment
@@ -85,6 +91,7 @@ class PAL():
                 episode = self.executing_policy()
                 data_buffer.append(episode)
                 self.reset_at_initial_state() # reset environment and agent state
+            print(f'Collected {len(data_buffer)} episodes')
             
             # compute parameters to optimize model and improve policy
             p = np.array(self.model_agent.transition_distribuition) # transition probability matrix
@@ -97,13 +104,16 @@ class PAL():
             self.model_agent.next_state_function = optimal_next_state_function
             self.model_agent.reward_function = optimal_reward_function
             self.model_agent.values_function = optimal_value_function
+            print('Model optimized')
             
             # improve policy
             self.policy_agent.policy = policy 
             self.policy_agent.states_space = states_space_policy
+            print('Policy improved')
 
             # stopping criteria: stop in nash equilibrium
             if self.__check_stackelberg_nash_equilibrium():
+                print('Stackelberg nash equilibrium reached')
                 break
         
     def executing_policy(self):
@@ -251,7 +261,7 @@ class PAL():
             else:
                 td_error = reward - temp_value_function[temp_states_space[state]]
 
-            temp_value_function[temp_states_space[state]] += self.lr * td_error
+            temp_value_function[temp_states_space[state]] += self.alpha * td_error
 
         return q, temp_states_space, temp_reward_function, temp_next_state_function, temp_value_function
 
@@ -288,7 +298,7 @@ class PAL():
         return temp_policy, temp_states_space_policy
     
     def __update_policy(self, state, policy:list, states_space_policy:dict, previous_action:int,
-        value_function:dict, states_space_model_model:dict):
+        value_function:dict, states_space_model:dict):
         """
         Update given policy with new state if it is not already present in the given states space
         else update policy with new transition matrix and add new state to states space
@@ -303,7 +313,7 @@ class PAL():
             states_space_policy (list): updated states space
         """
         state_not_walls = self.policy_agent.compute_walls_from_transition_matrix(
-            previous_action, self.env.p[:, state, :])
+            previous_action, self.env.p[:, self.env.state_from_coordinates(state[0], state[1]), :])
 
         # check if state and next_state are already in the states space and get their index
         state_not_walls_index = [key for key, value in states_space_policy.items()
@@ -315,10 +325,13 @@ class PAL():
             policy.append(state_not_walls / np.sum(state_not_walls))
 
         # policy improvement
-        gradient = 0 #FIXME: update using gradient descent (incremental value approximation)
+        gradient = value_function[states_space_model[state]] #FIXME
         policy[state_not_walls_index[0]] += self.lr * gradient
         policy[state_not_walls_index[0]] -= min(policy[state_not_walls_index[0]]) # each action is in [0, 1]
-        policy[state_not_walls_index[0]] /= np.sum(policy[state_not_walls_index[0]]) # sum to 1
+        try:
+            policy[state_not_walls_index[0]] /= np.sum(policy[state_not_walls_index[0]]) # sum to 1
+        except:
+            print('Error in policy improvement')
 
         return policy, states_space_policy
     
@@ -333,10 +346,12 @@ class PAL():
         Returns:
             cost_function (float): cost function computed from policy and states space
         """
+        cost_function = np.sum(policy * self.model_agent.reward_function.values())
+
         #TODO: sostituire con un metodo incrementale come gradient descent per value approximation
         cost_function = 0
-        for state in states_space.keys(): #TODO: è sbagliato, solo per farlo funzionare
-            cost_function += np.sum(policy[state])#*self.model_agent.reward_function[state])
+        #for state in states_space.keys(): #TODO: è sbagliato, solo per farlo funzionare
+            #cost_function += np.sum(policy[state])#*self.model_agent.reward_function[state])
         return cost_function
 
     ###### stopping criteria ######
@@ -348,6 +363,6 @@ class PAL():
         equilibria = np.where(stackelberg_nash_equilibrium(
             leader_payoffs=[-kl_div for kl_div in self.kl_divergence], 
             follower_payoffs=self.cost_function
-            ) != 0)[0]
+            ) != 0)
 
         return self.optimal_model in equilibria

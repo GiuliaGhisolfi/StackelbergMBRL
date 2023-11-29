@@ -27,7 +27,7 @@ if __name__ == '__main__':
 
     # agent parameters
     gamma = 0.9 # discount factor to compute expected cumulative reward
-    algorithm = 'baseline' # 'PAL' or 'MAL' or 'baseline'
+    algorithm = 'PAL' # 'PAL' or 'MAL' or 'baseline'
 
     # PAL agent parameters
     alpha = 0.01 # learning rate for policy improvment

@@ -82,9 +82,6 @@ class PolicyAgent():
         else:
             env_not_walls = transition_matrix
 
-        w = np.array([0 if i==0 else 1 for i in env_not_walls[WALLS_MAP[action]]])
-        if w[3] == 0:
-            print("ERROR: agent's above wall is 0") #FIXME: check if this is correct
         return np.array([0 if i==0 else 1 for i in env_not_walls[WALLS_MAP[action]]])
     
     def __compute_fitizial_first_action(self, transition_matrix_initial_state:np.ndarray):

@@ -1,8 +1,7 @@
 import pygame
 from src.environment.environment import Environment
 from src.agents.baseline import Baseline
-from src.agents.model_agent import ModelAgent
-from src.agents.policy_agent import PolicyAgent
+from src.agents.stackelberg_agent import StackelbergAgent
 
 class MBRLMazeSolver():
 
@@ -24,17 +23,14 @@ class MBRLMazeSolver():
         # initialize agent: policy and model
         if self.algorithm == 'baseline':
             self.agent = Baseline(
-                gamma=gamma,
                 initial_state_coord=self.env.initial_state_coord,
                 transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :],
                 )
         else:
-            self.model_agent = ModelAgent(
-                gamma=gamma,
-                transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :],
+            self.agent = StackelbergAgent(
                 initial_state_coord=self.env.initial_state_coord,
-                )
-            self.policy_agent = PolicyAgent(
+                policy_path='src/saved_policy/PAL_policy.json',
+                states_space_path='src/saved_policy/PAL_states_space.json',
                 transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :],
                 )
         
@@ -46,7 +42,7 @@ class MBRLMazeSolver():
         if self.algorithm == 'baseline':
             self.run_baseline()
         else:
-            self.run_stackelberg() # FIXME: divide in PAL and MAL
+            self.run_stackelberg()
 
     def run_baseline(self):
         # run algorithm
@@ -79,9 +75,30 @@ class MBRLMazeSolver():
                 
     
     def run_stackelberg(self):
-        # TODO
+        # run algorithm
+        action = self.agent.fittizial_first_action
+        for epoch in range(self.max_epochs):
+            # execute policy
+            action = self.agent.take_action(
+                action=action,
+                transition_matrix=self.env.p[:, self.env.state, :]
+                )
+            
+            # take a step in the environment
+            self.env.step(action)
 
-        pass
+            # update current state
+            self.agent.update_agent_parameters(
+                next_state_coord=self.env.coordinates_from_state(self.env.state)
+            )
+            
+            # render environment and agent
+            if self.render_bool:
+                self.render(self.render_wait)
+            
+            if self.agent.agent_state_coord == self.env.terminal_state_coord:
+                print('Agent reached terminal state in {} steps'.format(epoch))
+                break
 
     def render(self, wait=0):
         # Render environment and agent using pygame
