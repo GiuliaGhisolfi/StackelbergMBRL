@@ -51,16 +51,21 @@ class PAL():
 
             # reset and initialize new environment and model agent
             self.env.reset_environment()
-            self.model_agent.reset_agent()
+            self.model_agent.reset_agent(
+                initial_state_coord=self.env.initial_state_coord, 
+                transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :])
 
             # reset transition probability matrix p
             self.p = self.model_agent.transition_distribuition[self.model_agent.agent_state]
 
             # reset policy agent at initial state
-            self.policy_agent.reset_at_initial_state()
+            self.policy_agent.reset_at_initial_state(transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :])
 
-        # save final policy in json file
-        json.dump(self.policy_agent.policy, open('../policy/policy.json', 'w'))
+        # save final policy and policy states space in json file
+        with open('../policy/policy.json', 'w') as policy_file:
+            policy_file.write(json.dumps(self.policy_agent.policy, indent=4))
+        with open('../policy/states_space.json', 'w') as policy_file:
+            policy_file.write(json.dumps(self.policy_agent.states_space, indent=4))
     
     def reset_at_initial_state(self):
         # reset agent's position in the environment
@@ -81,19 +86,20 @@ class PAL():
                 data_buffer.append(episode)
                 self.reset_at_initial_state() # reset environment and agent state
             
-            # build policy-specific model
+            # compute parameters to optimize model and improve policy
             p = np.array(self.model_agent.transition_distribuition) # transition probability matrix
-            q_optimal, states_space, optimal_reward_function, optimal_next_state_function = \
-                self.__optimize_model(data_buffer, p)
-            self.model_agent.transition_distribuition = q_optimal #TODO: controllare che torni una lista di np.array len=n_states in space state
-            self.model_agent.states_space = states_space
+            q_optimal, states_space_model, optimal_reward_function, optimal_next_state_function, \
+                policy, states_space_policy = self.__optimize_model_improve_policy(data_buffer, p)
+            
+            # build policy-specific model
+            self.model_agent.transition_distribuition = q_optimal
+            self.model_agent.states_space = states_space_model
             self.model_agent.next_state_function = optimal_next_state_function
             self.model_agent.reward_function = optimal_reward_function
             
             # improve policy
-            policy, states_space = self.__improve_policy(data_buffer)
-            self.policy_agent.policy = policy
-            self.policy_agent.states_space = states_space
+            self.policy_agent.policy = policy 
+            self.policy_agent.states_space = states_space_policy
 
             # stopping criteria: stop in nash equilibrium
             if self.__check_stackelberg_nash_equilibrium():
@@ -137,8 +143,7 @@ class PAL():
             
         return episode
 
-    ###### model optimization ######
-    def __optimize_model(self, data_buffer, p): #TODO: change chiamata
+    def __optimize_model_improve_policy(self, data_buffer, p):
         """
         Build optimal model from experience using episode saved in data_buffer: 
         optimal model is the one that minimize the loss between current model and
@@ -148,36 +153,55 @@ class PAL():
             data_buffer (list): list of episodes, each episode is a list of tuples (state, action, reward, next_state)
             p (np.ndarray): transition probability matrix of the model
         """
-
+        # model parameters
         loss = np.inf # model loss: kl divergence between model and data transition probability
         self.kl_divergence = [] # list of kl divergence between model and data
         self.optimal_model = -1 # optimal model index in data_buffer, to check if I'm in nash equilibrium
 
         q_optimal = np.empty((0, len(ACTION_LIST))) # init data transition probability as an empty array
-        optimal_states_space = dict() # init optimal states space
+        optimal_states_space_model = dict() # init optimal states space
 
+        # policy parameters
+        policy = []
+        states_space_policy = []
+        cost_function = -np.inf # cost function to maximize
+        self.cost_function = [] # list of cost function computed from each episode
+
+        # loop over episodes in data buffer
         for i, episode in enumerate(data_buffer):
             # compute model parameters for model optimization
-            q, temp_state_space, temp_reward_function, temp_next_state_function = \
+            q, temp_states_space_model, temp_reward_function, temp_next_state_function = \
                 self.__compute_transition_probability_from_episode(episode)
-            p, q = self.__q_as_a_distribution(p, q)
+            q = self.__q_as_a_distribution(p, q)
 
             local_loss = compute_model_loss(
                 transition_probability_model=p,
                 transition_probability_data=q)
+            
             if local_loss < loss:
                 loss = local_loss
                 q_optimal = q
                 self.optimal_model = i
-                optimal_states_space = temp_state_space
+                optimal_states_space_model = temp_states_space_model
                 optimal_next_state_function = temp_next_state_function
                 optimal_reward_function = temp_reward_function
             self.kl_divergence.append(local_loss) # in [0, +inf]
 
             # compute policy parameters for policy improvement
+            temp_policy, temp_states_space_policy = self.__improve_policy_from_episode(episode,
+                transition_distribuition=q, states_space_model=temp_states_space_model)
+            local_cost_function = self.__compute_cost_function(temp_policy, temp_states_space_policy)
 
-        return q_optimal, optimal_states_space, optimal_reward_function, optimal_next_state_function
+            if local_cost_function > cost_function:
+                cost_function = local_cost_function
+                policy = temp_policy
+                states_space_policy = temp_states_space_policy
+            self.cost_function.append(local_cost_function)
+
+        return (q_optimal, optimal_states_space_model, optimal_reward_function, optimal_next_state_function, 
+            policy, states_space_policy)
     
+    ###### model optimization ######
     def __compute_transition_probability_from_episode(self, episode):
         """
         Compute transition probability from episode
@@ -199,15 +223,16 @@ class PAL():
                 # add new visited state to states space
                 temp_states_space[state] = states_model_space_dim 
                 states_model_space_dim += 1
-        if next_state not in temp_states_space.keys():
-            temp_states_space[next_state] = states_model_space_dim # last state
                 
         q = np.zeros((states_model_space_dim, len(ACTION_LIST)))
 
         for state, action, reward, next_state in episode:
             q[temp_states_space[state], action] += 1
-            temp_next_state_function[(temp_states_space[state], action)] = temp_states_space[next_state]
             temp_reward_function[(temp_states_space[state], action)] = reward
+            if next_state in temp_states_space.keys():
+                # not add last state visited in the episode to next state function
+                #TODO: forse la funzione 'temp_next_state_function' si può togliere
+                temp_next_state_function[(temp_states_space[state], action)] = temp_states_space[next_state]
 
         q /= np.sum(q, axis=1)[:, None]
         q[np.isnan(q)] = 0 # if 0/0, then 0
@@ -222,51 +247,34 @@ class PAL():
         Args:
             p (np.ndarray): transition probability matrix of the model
             q (np.ndarray): transition probability matrix of the data
+        
+        Returns:
+            q (np.ndarray): transition probability matrix of the data as a distribution over actions
         """
         for i in range(len(q)):
             if np.all(q[i] == 0):
                 q[i] = p[i]
-        return p, q
+        return q
     
     ###### policy improvement ######
-    def __improve_policy(self, data_buffer):
-        # improve policy given transition_distribuition
-        policy = []
-        states_space = []
-        cost_function = -np.inf # cost function to maximize
-        self.cost_function = [] # list of cost function computed from each episode
-
-        for episode in data_buffer:
-            temp_policy, temp_states_space = self.__improve_policy_from_episode(episode)
-            local_cost_function = self.__compute_cost_function(temp_policy, temp_states_space) #FIXME
-            if local_cost_function > cost_function:
-                cost_function = local_cost_function
-                policy = temp_policy
-                states_space = temp_states_space
-            self.cost_function.append(local_cost_function)
-        
-        return policy, states_space
-
-    def __improve_policy_from_episode(self, episode):
+    def __improve_policy_from_episode(self, episode, transition_distribuition, states_space_model):
         temp_policy = self.policy_agent.policy.copy()
-        temp_states_space = self.policy_agent.states_space.copy()
+        temp_states_space_policy = self.policy_agent.states_space.copy()
         previous_action = self.policy_agent.fittizial_first_action
             
         for state, action, reward, next_state in episode:
 
-            state_transition_matrix = self.model_agent.transition_distribuition[
-                self.model_agent.states_space[state]]
-            next_state_transition_matrix = self.model_agent.transition_distribuition[
-                self.model_agent.states_space[next_state]]
+            state_transition_matrix = transition_distribuition[states_space_model[state]]
+            next_state_transition_matrix = transition_distribuition[states_space_model[next_state]]
 
-            temp_policy, temp_states_space = self.update_policy(temp_policy, temp_states_space, 
+            temp_policy, temp_states_space_policy = self.__update_policy(temp_policy, temp_states_space_policy, 
                 previous_action, state_transition_matrix, action, reward, next_state_transition_matrix)
             
             previous_action = action
         
-        return temp_policy, temp_states_space
+        return temp_policy, temp_states_space_policy
     
-    def update_policy(self, policy:list, states_space:dict, previous_action:int, state_transition_matrix:np.ndarray, 
+    def __update_policy(self, policy:list, states_space_policy:dict, previous_action:int, state_transition_matrix:np.ndarray, 
             action:int, reward:float, next_state_transition_matrix:np.ndarray):
         """
         Update given policy with new state if it is not already present in the given states space
@@ -286,24 +294,35 @@ class PAL():
             policy (list): updated policy
             states_space (list): updated states space
         """
-        #TODO: maybe change with q learning?
+        #TODO: maybe change with q learning? o ottimizzare quando si ha 1! action possibile
         state_not_walls = self.policy_agent.compute_walls_from_transition_matrix(
             previous_action, state_transition_matrix)
         next_state_not_walls = self.policy_agent.compute_walls_from_transition_matrix(
             action, next_state_transition_matrix)
 
-        if (state_not_walls in np.array(states_space) and 
-            next_state_not_walls in np.array(states_space)):
-            # TD learning update rule
-            td_error = reward + self.gamma * policy[states_space[next_state_not_walls]
-                ] - policy[states_space[state_not_walls]]
-            policy[state_not_walls] += self.lr * td_error
-            policy[state_not_walls] /= np.sum(policy[state_not_walls])
-        else:
-            states_space[len(states_space)] = state_not_walls
-            policy.append(state_not_walls / np.sum(state_not_walls))
+        # check if state and next_state are already in the states space and get their index
+        state_not_walls_index = [key for key, value in states_space_policy.items() 
+            if np.equal(value, state_not_walls).all()]
+        next_state_not_walls_index = [key for key, value in states_space_policy.items() 
+            if np.equal(value, next_state_not_walls).all()]
         
-        return policy, states_space
+        if len(state_not_walls_index) == 1 and len(next_state_not_walls_index) == 1:
+            # TD learning update rule 
+            td_error = reward + (self.gamma  * policy[next_state_not_walls_index[0]] - policy[state_not_walls_index[0]]) #FIXME
+            policy[state_not_walls_index[0]] += self.lr * td_error  * policy[state_not_walls_index[0]]
+            
+            policy[state_not_walls_index[0]] -= min(policy[state_not_walls_index[0]]) # each action is in [0, 1]
+            policy[state_not_walls_index[0]] /= np.sum(policy[state_not_walls_index[0]]) # sum to 1
+        else:
+            # add new states to states space
+            if len(state_not_walls_index) < 1:
+                states_space_policy[len(states_space_policy)] = state_not_walls
+                policy.append(state_not_walls / np.sum(state_not_walls))
+            if len(next_state_not_walls_index) < 1:
+                states_space_policy[len(states_space_policy)] = next_state_not_walls
+                policy.append(next_state_not_walls / np.sum(next_state_not_walls))
+            
+        return policy, states_space_policy
     
     def __compute_cost_function(self, policy, states_space):
         """
@@ -329,7 +348,7 @@ class PAL():
         # verify if I'm in a equilbrium, knowing all possible transition distribuition from the model and the policy
 
         equilibria = np.where(stackelberg_nash_equilibrium(
-            leader_payoffs=-self.kl_divergence, 
+            leader_payoffs=[-kl_div for kl_div in self.kl_divergence], 
             follower_payoffs=self.cost_function
             ) != 0)[0]
 

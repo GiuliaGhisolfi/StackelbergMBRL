@@ -30,7 +30,7 @@ class PolicyAgent():
         """
         not_walls = self.compute_walls_from_transition_matrix(action, transition_matrix)
 
-        if not_walls in np.array(self.states_space.values()):
+        if len([key for key, value in self.states_space.items() if np.equal(value, not_walls).all()]) == 1:
             pass
             # TODO: update policy using idk what but consider rewards
         else:
@@ -66,7 +66,8 @@ class PolicyAgent():
         """
         not_walls = self.compute_walls_from_transition_matrix(action, transition_matrix)
 
-        if not_walls not in np.array(self.states_space.values()):
+         # add state to states space if it isn't already in
+        if len([key for key, value in self.states_space.items() if np.equal(value, not_walls).all()]) < 1:
             self.states_space[len(self.states_space)] = not_walls
             self.policy.append(not_walls / np.sum(not_walls))
     
@@ -80,7 +81,7 @@ class PolicyAgent():
             env_not_walls = np.sum(transition_matrix, axis=0)
         else:
             env_not_walls = transition_matrix
-        return np.array([0 if i==0 else 1 for i in env_not_walls[WALLS_MAP[action]]])
+        return np.array([0 if i==0 else 1 for i in env_not_walls[WALLS_MAP[action]]]) #FIXME: check if this is correct
     
     def __compute_fitizial_first_action(self, transition_matrix_initial_state:np.ndarray):
         # compute a fitizial action to possibly arrive in initial state
