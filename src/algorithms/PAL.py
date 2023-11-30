@@ -83,11 +83,12 @@ class PAL():
             transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :])
  
     def __train_loop_for_the_environment(self):
+        nash_equilibrium_found = False
         for _ in range(self.max_iterations_per_environment):
             data_buffer = [] # list of episodes, each episode is a list of tuples (state, action, reward, next_state)
 
             # collect data executing policy in the environment
-            for _ in range(self.n_episodes_per_iteration):
+            for i in range(self.n_episodes_per_iteration):
                 episode = self.executing_policy()
                 data_buffer.append(episode)
                 self.reset_at_initial_state() # reset environment and agent state
@@ -113,8 +114,11 @@ class PAL():
 
             # stopping criteria: stop in nash equilibrium
             if self.__check_stackelberg_nash_equilibrium():
-                print('Stackelberg nash equilibrium reached')
+                nash_equilibrium_found = True
+                print(f'Stackelberg nash equilibrium reached after {i+1} epochs \n')
                 break
+        if not nash_equilibrium_found:
+            print(f'Stackelberg nash equilibrium not reached after {self.max_iterations_per_environment} epochs \n')
         
     def executing_policy(self):
         """
@@ -327,9 +331,10 @@ class PAL():
         # policy improvement
         gradient = value_function[states_space_model[state]] #FIXME
         policy[state_not_walls_index[0]] += self.lr * gradient
-        policy[state_not_walls_index[0]] -= min(policy[state_not_walls_index[0]]) # each action is in [0, 1]
-        if np.sum(policy[state_not_walls_index[0]]) == 0:
-            print('policy sum to 0')
+        if not np.equal(state_not_walls, np.zeros(len(ACTION_LIST))).all():
+            policy[state_not_walls_index[0]] -= min(policy[state_not_walls_index[0]]) # each action is in [0, 1]
+        if np.equal(state_not_walls, np.zeros(len(ACTION_LIST))).all():
+            print(policy[state_not_walls_index[0]])
         policy[state_not_walls_index[0]] /= np.sum(policy[state_not_walls_index[0]]) # sum to 1
 
         return policy, states_space_policy
@@ -345,7 +350,6 @@ class PAL():
         Returns:
             cost_function (float): cost function computed from policy and states space
         """
-
         #TODO: sostituire con un metodo incrementale come gradient descent per value approximation
         cost_function = 0
         #for state in states_space.keys():
