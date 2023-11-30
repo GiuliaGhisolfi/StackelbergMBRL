@@ -24,7 +24,7 @@ class PAL():
         # initalize environment
         self.env = Environment(
             maze_width=maze_width,
-            maze_height=maze_height,
+            maze_height=maze_height
             ) #TODO: cambiare render mode per evitare chiamata a pygame
 
         # initialize model and policy agents
@@ -51,7 +51,8 @@ class PAL():
             # train loop for the environment
             self.__train_loop_for_the_environment()
 
-            #TODO: save policy in json file every n iterations, idk how many
+            # checkpoint: save policy and policy states space in json file
+            self.save_policy(self, number_environments=i)
 
             # reset and initialize new environment and model agent
             self.env.reset_environment()
@@ -65,13 +66,18 @@ class PAL():
             # reset policy agent at initial state
             self.policy_agent.reset_at_initial_state(
                 transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :])
-
+        
         # save final policy and policy states space in json file
-        with open('src/saved_policy/PAL_policy.json', 'w') as policy_file:
+        self.save_policy(self, number_environments=i)
+        
+    def save_policy(self, number_environments):
+        # save final policy and policy states space in json file
+        with open(f'src/saved_policy/PAL_policy{number_environments}env.json', 'w') as policy_file:
             json.dump([row.tolist() for row in self.policy_agent.policy], policy_file)
-        with open('src/saved_policy/PAL_states_space.json', 'w') as states_space_file:
+        with open(f'src/saved_policy/PAL_states_space_{number_environments}env.json', 'w') as states_space_file:
             json.dump({str(key): value.tolist() for key, value in 
             self.policy_agent.states_space.items()}, states_space_file)
+        #TODO: save param in json file
     
     def reset_at_initial_state(self):
         # reset agent's position in the environment
@@ -331,11 +337,10 @@ class PAL():
         # policy improvement
         gradient = value_function[states_space_model[state]] #FIXME
         policy[state_not_walls_index[0]] += self.lr * gradient
-        if not np.equal(state_not_walls, np.zeros(len(ACTION_LIST))).all():
+        if not np.equal(state_not_walls, np.ones(len(ACTION_LIST))).all():
             policy[state_not_walls_index[0]] -= min(policy[state_not_walls_index[0]]) # each action is in [0, 1]
-        if np.equal(state_not_walls, np.zeros(len(ACTION_LIST))).all():
-            print(policy[state_not_walls_index[0]])
         policy[state_not_walls_index[0]] /= np.sum(policy[state_not_walls_index[0]]) # sum to 1
+        #TODO: check if a senso + if con le 4 pareti libere non è sempre uniforme
 
         return policy, states_space_policy
     

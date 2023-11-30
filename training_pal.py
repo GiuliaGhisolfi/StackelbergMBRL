@@ -28,7 +28,7 @@ if __name__ == '__main__':
     # training parameters
     n_environments = 3 # number of different environments to train on
     max_iterations_per_environment = 3
-    n_episodes_per_iteration = 3 # number of episodes to run for each epoch
+    n_episodes_per_iteration = 5 # number of episodes to run for each epoch
     max_epochs_per_episode = 6000
     learning_rate = 0.01
 
