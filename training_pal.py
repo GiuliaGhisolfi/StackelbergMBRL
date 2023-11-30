@@ -26,10 +26,10 @@ if __name__ == '__main__':
     alpha = 0.01 # learning rate for policy improvment
 
     # training parameters
-    n_environments = 2 # number of different environments to train on
+    n_environments = 3 # number of different environments to train on
     max_iterations_per_environment = 3
-    n_episodes_per_iteration = 4 # number of episodes to run for each epoch
-    max_epochs_per_episode = 600
+    n_episodes_per_iteration = 3 # number of episodes to run for each epoch
+    max_epochs_per_episode = 6000
     learning_rate = 0.01
 
 

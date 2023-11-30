@@ -13,7 +13,7 @@ def main(maze_width, maze_height, max_epochs, algorithm, n_episodes_per_iteratio
         beta=beta,
         render=render,
         render_wait=render_wait
-    )
+    ) #TODO: delete unused parameters
 
     mbrl_maze_solver.run()
 

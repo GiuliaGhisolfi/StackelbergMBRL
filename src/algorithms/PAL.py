@@ -24,8 +24,8 @@ class PAL():
         # initalize environment
         self.env = Environment(
             maze_width=maze_width,
-            maze_height=maze_height
-            )
+            maze_height=maze_height,
+            ) #TODO: cambiare render mode per evitare chiamata a pygame
 
         # initialize model and policy agents
         self.model_agent = ModelAgent(
@@ -328,10 +328,9 @@ class PAL():
         gradient = value_function[states_space_model[state]] #FIXME
         policy[state_not_walls_index[0]] += self.lr * gradient
         policy[state_not_walls_index[0]] -= min(policy[state_not_walls_index[0]]) # each action is in [0, 1]
-        try:
-            policy[state_not_walls_index[0]] /= np.sum(policy[state_not_walls_index[0]]) # sum to 1
-        except:
-            print('Error in policy improvement')
+        if np.sum(policy[state_not_walls_index[0]]) == 0:
+            print('policy sum to 0')
+        policy[state_not_walls_index[0]] /= np.sum(policy[state_not_walls_index[0]]) # sum to 1
 
         return policy, states_space_policy
     
@@ -346,11 +345,10 @@ class PAL():
         Returns:
             cost_function (float): cost function computed from policy and states space
         """
-        cost_function = np.sum(policy * self.model_agent.reward_function.values())
 
         #TODO: sostituire con un metodo incrementale come gradient descent per value approximation
         cost_function = 0
-        #for state in states_space.keys(): #TODO: è sbagliato, solo per farlo funzionare
+        #for state in states_space.keys():
             #cost_function += np.sum(policy[state])#*self.model_agent.reward_function[state])
         return cost_function
 
