@@ -6,7 +6,9 @@ from src.agents.stackelberg_agent import StackelbergAgent
 class MBRLMazeSolver():
 
     def __init__(self, maze_width, maze_height, max_epochs, algorithm='baseline',
-        n_episodes_per_iteration=100, gamma=0.9, alpha=0.01, beta=0.01, render=True, render_wait=0):
+        n_episodes_per_iteration=100, gamma=0.9, alpha=0.01, beta=0.01, render=True, render_wait=0,
+        policy_path='src/saved_policy/PAL_policy.json', 
+        states_space_path='src/saved_policy/PAL_states_space.json'):
         # TODO: parameters check
         self.algorithm = algorithm # 'PAL' or 'MAL' or 'baseline'
         self.max_epochs = max_epochs
@@ -29,8 +31,8 @@ class MBRLMazeSolver():
         else:
             self.agent = StackelbergAgent(
                 initial_state_coord=self.env.initial_state_coord,
-                policy_path='src/saved_policy/PAL_policy.json',
-                states_space_path='src/saved_policy/PAL_states_space.json',
+                policy_path=policy_path,
+                states_space_path=states_space_path,
                 transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :],
                 )
         

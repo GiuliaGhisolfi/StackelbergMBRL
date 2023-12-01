@@ -1,7 +1,7 @@
 from src.algorithms.PAL import PAL
 
 def main(learning_rate, n_environments, max_iterations_per_environment, n_episodes_per_iteration, max_epochs_per_episode, 
-    maze_width, maze_height, alpha, gamma):
+    maze_width, maze_height, alpha, gamma, epsilon, temperature):
     pal = PAL(
         learning_rate=learning_rate, 
         n_environments=n_environments,
@@ -11,7 +11,10 @@ def main(learning_rate, n_environments, max_iterations_per_environment, n_episod
         maze_width=maze_width, 
         maze_height=maze_height, 
         alpha = alpha,
-        gamma=gamma)
+        gamma=gamma,
+        epsilon=epsilon,
+        temperature=temperature
+        )
     
     pal.train()
 
@@ -26,11 +29,13 @@ if __name__ == '__main__':
     alpha = 0.01 # learning rate for policy improvment
 
     # training parameters
-    n_environments = 3 # number of different environments to train on
-    max_iterations_per_environment = 3
-    n_episodes_per_iteration = 5 # number of episodes to run for each epoch
-    max_epochs_per_episode = 6000
+    n_environments = 2 # number of different environments to train on
+    max_iterations_per_environment = 2
+    n_episodes_per_iteration = 2 # number of episodes to run for each epoch
+    max_epochs_per_episode = 600
     learning_rate = 0.01
+    epsilon = 0.1 # epsilon for epsilon-greedy policy
+    temperature = 1 # temperature for softmax policy
 
 
     main(
@@ -42,5 +47,7 @@ if __name__ == '__main__':
         maze_width=maze_width, 
         maze_height=maze_height, 
         alpha=alpha,
-        gamma=gamma
+        gamma=gamma,
+        epsilon=epsilon,
+        temperature=temperature
     )

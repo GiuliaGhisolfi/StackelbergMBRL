@@ -10,10 +10,13 @@ WALLS_MAP = {
 }
 
 class PolicyAgent():
-    def __init__(self, gamma:float, transition_matrix_initial_state:np.ndarray):
+    def __init__(self, gamma:float, transition_matrix_initial_state:np.ndarray, 
+    compute_action_policy:str='epsilon_greedy', epsilon:float=0.1):
         self.policy = [] # policy[state number] = probability distribution over actions
         self.states_space = dict() # {state number: walls[-,-,-,-]}
         self.gamma = gamma # discount factor
+        self.compute_action_policy = compute_action_policy # epsilon_greedy or uniform_initialization
+        self.epsilon = epsilon
 
         self.__compute_fitizial_first_action(transition_matrix_initial_state)
         self.update_policy(action=self.fittizial_first_action, 
@@ -35,7 +38,13 @@ class PolicyAgent():
             # TODO: update policy using idk what but consider rewards
         else:
             self.states_space[len(self.states_space)] = not_walls
-            self.policy.append(not_walls / np.sum(not_walls))
+            # update policy: epsilon greedy
+            if np.sum(not_walls) > 1:
+                policy = not_walls * self.epsilon / (np.sum(not_walls) - 1)
+                policy[np.where(not_walls == 1)[0][0]] = 1 - self.epsilon # first action on agent's left
+            else:
+                policy = not_walls.astype(float)
+            self.policy.append(policy)
 
     def get_state_number(self, action:int, transition_matrix:np.ndarray):
         not_walls = self.compute_walls_from_transition_matrix(action, transition_matrix)
@@ -66,10 +75,17 @@ class PolicyAgent():
         """
         not_walls = self.compute_walls_from_transition_matrix(action, transition_matrix)
 
-         # add state to states space if it isn't already in
+        # add state to states space if it isn't already in
         if len([key for key, value in self.states_space.items() if np.equal(value, not_walls).all()]) < 1:
             self.states_space[len(self.states_space)] = not_walls
-            self.policy.append(not_walls / np.sum(not_walls))
+
+            # update policy
+            if np.sum(not_walls) > 1:
+                policy = not_walls * self.epsilon / (np.sum(not_walls) - 1)
+                policy[np.where(not_walls == 1)[0][0]] = 1 - self.epsilon # epsilon greedy
+            else:
+                policy = not_walls.astype(float)
+            self.policy.append(policy)
     
     def compute_walls_from_transition_matrix(self, action:int, transition_matrix:np.ndarray):
         # compute walls from the agent's point of view: 0 if there is a wall, 1 otherwise
