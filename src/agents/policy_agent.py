@@ -35,7 +35,7 @@ class PolicyAgent():
 
         if len([key for key, value in self.states_space.items() if np.equal(value, not_walls).all()]) == 1:
             pass
-            # TODO: update policy using idk what but consider rewards
+            # TODO: update policy using idk what but consider rewards: consider to use actor critic
         else:
             self.states_space[len(self.states_space)] = not_walls
             # update policy: epsilon greedy

@@ -61,7 +61,7 @@ class PAL():
         for i in range(self.n_environments):
             print(f'\nTraining on environment {i+1}/{self.n_environments}')
             # train loop for the environment
-            self.__train_loop_for_the_environment()
+            self.__train_loop_for_the_environment(environment_number=i+1)
 
             # checkpoint: save policy and policy states space in json file
             self.save_policy(environment_number=i)
@@ -80,7 +80,7 @@ class PAL():
                 transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :])
         
         # save final policy and policy states space in json file
-        self.save_policy(environment_number=i)
+        self.save_policy(environment_number=i+1)
     
     def save_parameters(self):
         # save parameters in json file
@@ -99,9 +99,10 @@ class PAL():
         
     def save_policy(self, environment_number):
         # save final policy and policy states space in json file
-        with open(f'src/saved_policy/PAL_policy_{environment_number}env.json', 'w') as policy_file:
+        with open(f'src/saved_policy/PAL_policy_{environment_number}_env.json', 'w') as policy_file:
             json.dump([row.tolist() for row in self.policy_agent.policy], policy_file)
-        with open(f'src/saved_policy/PAL_states_space_{environment_number}env.json', 'w') as states_space_file:
+
+        with open(f'src/saved_policy/PAL_states_space_{environment_number}_env.json', 'w') as states_space_file:
             json.dump({str(key): value.tolist() for key, value in 
             self.policy_agent.states_space.items()}, states_space_file)
     
@@ -114,9 +115,10 @@ class PAL():
         self.policy_agent.reset_at_initial_state(
             transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :])
  
-    def __train_loop_for_the_environment(self):
+    def __train_loop_for_the_environment(self, environment_number):
         nash_equilibrium_found = False
-        for _ in range(self.max_iterations_per_environment):
+        for i in range(self.max_iterations_per_environment):
+            print(f'\nIteration {i+1}/{self.max_iterations_per_environment} for environment {environment_number}')
             data_buffer = [] # list of episodes, each episode is a list of tuples (state, action, reward, next_state)
 
             # collect data executing policy in the environment
@@ -137,20 +139,20 @@ class PAL():
             self.model_agent.next_state_function = optimal_next_state_function
             self.model_agent.reward_function = optimal_reward_function
             self.model_agent.values_function = optimal_value_function
-            print('Model optimized')
+            print(f'Model optimized: kl divergence: {self.kl_divergence[self.optimal_model]}')
             
             # improve policy
             self.policy_agent.policy = policy 
             self.policy_agent.states_space = states_space_policy
-            print('Policy improved')
+            print(f'Policy improved: cost function: {self.cost_function[self.optimal_model]}')
 
             # stopping criteria: stop in nash equilibrium
             if self.__check_stackelberg_nash_equilibrium():
                 nash_equilibrium_found = True
-                print(f'Stackelberg nash equilibrium reached after {i+1} epochs \n')
+                print(f'\nStackelberg nash equilibrium reached after {i+1} epochs \n')
                 break
         if not nash_equilibrium_found:
-            print(f'Stackelberg nash equilibrium not reached after {self.max_iterations_per_environment} epochs \n')
+            print(f'\nStackelberg nash equilibrium not reached after {self.max_iterations_per_environment} epochs \n')
         
     def executing_policy(self):
         """
@@ -210,8 +212,8 @@ class PAL():
         optimal_value_function = dict() # init optimal value function
 
         # policy parameters
-        policy = []
-        states_space_policy = []
+        optimal_policy = []
+        states_space_policy = dict()
         cost_function = -np.inf # cost function to maximize
         self.cost_function = [] # list of cost function computed from each episode
 
@@ -245,12 +247,12 @@ class PAL():
 
             if local_cost_function > cost_function:
                 cost_function = local_cost_function
-                policy = temp_policy
+                optimal_policy = temp_policy
                 states_space_policy = temp_states_space_policy
             self.cost_function.append(local_cost_function)
 
         return (q_optimal, optimal_states_space_model, optimal_reward_function, optimal_next_state_function, 
-            optimal_value_function, policy, states_space_policy)
+            optimal_value_function, optimal_policy, states_space_policy)
     
     ###### model optimization ######
     def __compute_transition_probability_from_episode(self, episode, p):
@@ -333,9 +335,16 @@ class PAL():
             previous_action = action
         
         # policy as a distribution over actions
+        temp_policy = softmax(np.array(temp_policy))
+
+        mask = np.array(list(self.policy_agent.states_space.values()))
+        temp_policy = np.multiply(temp_policy, mask) # apply mask to q_weights
+
+        temp_policy = [temp_states_space_policy[i].astype(float) if np.sum(state_policy)==0 else 
+            state_policy for i, state_policy in enumerate(temp_policy)]
         temp_policy /= np.sum(np.array(temp_policy), axis=1)[:, None] # normalize policy
-        temp_policy[np.isnan(temp_policy)] = 0 # if 0/0, then 0
-        
+        temp_policy[np.isnan(temp_policy)] = 0 # if 0/0, then 0        
+
         return temp_policy, temp_states_space_policy, advantages_policy
     
     def __update_policy(self, state, policy:list, states_space_policy:dict, action:int, previous_action:int,
@@ -382,7 +391,7 @@ class PAL():
         # verify if I'm in a equilbrium, knowing all possible transition distribuition from the model and the policy
 
         equilibria = np.where(stackelberg_nash_equilibrium(
-            leader_payoffs=[-kl_div for kl_div in self.kl_divergence], #TODO: check if -kl_div is correct
+            leader_payoffs=[-kl_div for kl_div in self.kl_divergence],
             follower_payoffs=self.cost_function
             ) != 0)
 

@@ -60,6 +60,9 @@ def stackelberg_nash_equilibrium(leader_payoffs, follower_payoffs):
     stackelberg_equilibria = list(game.support_enumeration())
 
     # Extract the probabilities of the leader and the strategy of the follower
-    leader_probabilities, follower_strategy = stackelberg_equilibria[0]
+    if len(stackelberg_equilibria) > 0:
+        leader_probabilities, follower_strategy = stackelberg_equilibria[0]
+    else:
+        leader_probabilities, follower_strategy = -1, -1 # no equilibria found
 
     return np.array(follower_strategy)
