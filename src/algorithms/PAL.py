@@ -96,10 +96,10 @@ class PAL():
         
     def save_policy(self, environment_number):
         # save final policy and policy states space in json file
-        with open(f'training_parameters/policy/PAL/policy_{environment_number}_env.json', 'w') as policy_file:
+        with open(f'training_parameters/policy/PAL/PAL_policy_{environment_number}_env.json', 'w') as policy_file:
             json.dump([row.tolist() for row in self.policy_agent.policy], policy_file)
 
-        with open(f'training_parameters/policy/PAL/states_space_{environment_number}_env.json', 'w') as states_space_file:
+        with open(f'training_parameters/policy/PAL/PAL_states_space_{environment_number}_env.json', 'w') as states_space_file:
             json.dump({str(key): value.tolist() for key, value in 
             self.policy_agent.states_space.items()}, states_space_file)
     
@@ -290,9 +290,9 @@ class PAL():
         temp_reward_function = self.model_agent.reward_function.copy()
         temp_value_function = self.model_agent.values_function.copy()
 
+        # add new visited state to states space
         for state, action, reward, next_state in episode:
             if state not in temp_states_space.keys():
-                # add new visited state to states space
                 temp_states_space[state] = states_model_space_dim 
                 temp_value_function[states_model_space_dim] = 0 # init value function
                 states_model_space_dim += 1
@@ -300,9 +300,10 @@ class PAL():
         # initialize transition probability matrix 
         q = np.zeros((states_model_space_dim, len(ACTION_LIST)))
         q[:p.shape[0], :] = p
-        q_weights = q.copy() # init transition probability matrix weights # TODO: INITI WEIGHTS WITH SOMENTHING AND SAVE
-        mask = np.zeros((states_model_space_dim, len(ACTION_LIST))) # possible actions from each state
+        q_weights = q.copy() # init transition probability weights
+        mask = np.zeros((states_model_space_dim, len(ACTION_LIST))) # bool: possible actions from each state
         
+        # update transition probability weights using actor-critic with TD(0) learning
         for state, action, reward, next_state in episode:
             # update reward function
             temp_reward_function[(temp_states_space[state], action)] = reward
@@ -330,7 +331,7 @@ class PAL():
             mask[temp_states_space[state], action] = 1
 
         q_weights = softmax(q_weights)
-        q = np.multiply(q_weights, mask) # apply mask to q_weights
+        q += self.lr * np.multiply(q_weights, mask) # apply mask to q_weights
         
         q /= np.sum(q, axis=1)[:, None]
         q[np.isnan(q)] = 0 # if 0/0, then 0
@@ -353,12 +354,12 @@ class PAL():
             previous_action = action
         
         # policy as a distribution over actions
-        temp_policy = softmax(np.array(temp_policy))
+        temp_policy = softmax(temp_policy)
 
         mask = np.array(list(self.policy_agent.states_space.values()))
         temp_policy = np.multiply(temp_policy, mask) # apply mask to q_weights
 
-        temp_policy = [temp_states_space_policy[i].astype(float) if np.sum(state_policy)==0 else 
+        temp_policy = [temp_states_space_policy[i].astype(float).tolist() if np.sum(state_policy)==0 else 
             state_policy for i, state_policy in enumerate(temp_policy)]
         temp_policy /= np.sum(np.array(temp_policy), axis=1)[:, None] # normalize policy
         temp_policy[np.isnan(temp_policy)] = 0 # if 0/0, then 0        
@@ -381,16 +382,16 @@ class PAL():
             
             # update policy: epsilon greedy
             if np.sum(state_not_walls) > 1:
-                policy = state_not_walls * self.epsilon / (np.sum(state_not_walls) - 1)
-                policy[np.where(state_not_walls == 1)[0][0]] = 1 - self.epsilon # first action on agent's left
+                state_policy = state_not_walls * self.epsilon / (np.sum(state_not_walls) - 1)
+                state_policy[np.where(state_not_walls == 1)[0][0]] = 1 - self.epsilon # first action on agent's left
             else:
-                policy = state_not_walls.astype(float)
+                state_policy = state_not_walls.astype(float)
             policy.append(policy)
             
             # update advantages vector
             advantages_policy = np.concatenate((advantages_policy, np.zeros(1)))
 
-        # policy improvement
+        # policy improvement using actor-critic
         action_agent_pov = ACTIONS_MAP[previous_action][action]
         gradient = softmax_gradient(policy=policy[state_not_walls_index[0]], 
             action=action_agent_pov, temperature=self.temperature)

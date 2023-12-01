@@ -33,8 +33,8 @@ if __name__ == '__main__':
     max_iterations_per_environment = 2
     n_episodes_per_iteration = 2 # number of episodes to run for each epoch
     max_epochs_per_episode = 60
-    learning_rate = 0.1
-    epsilon = 0.1 # epsilon for epsilon-greedy policy
+    learning_rate = 0.2
+    epsilon = 0.3 # epsilon for epsilon-greedy policy
     temperature = 1 # temperature for softmax policy
 
 

@@ -15,10 +15,11 @@ def softmax_gradient(policy, action, temperature):
     return gradient
 
 def softmax(x):
-    if len(x.shape) > 1:
+    if len(np.array(x).shape) > 1:
         # matrix
         exp_values = np.exp(x - np.max(x, axis=1, keepdims=True))
-        probabilities = exp_values / np.sum(exp_values, axis=1, keepdims=True)
+        probabilities = exp_values.tolist() / np.sum(exp_values, axis=1, keepdims=True)
+        probabilities = [state_probabilities for state_probabilities in probabilities] # convert to list of np.array
     else:
         # vector
         exp_values = np.exp(x - np.max(x))
