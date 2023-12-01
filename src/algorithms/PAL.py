@@ -1,10 +1,9 @@
 import numpy as np
-import json
 from src.agents.model_agent import ModelAgent
 from src.agents.policy_agent import PolicyAgent
 from src.environment.environment import Environment
 from src.algorithms.utils import softmax_gradient, softmax, stackelberg_nash_equilibrium, \
-    compute_model_loss, compute_actor_critic_objective
+    compute_model_loss, compute_actor_critic_objective, save_metrics, save_policy, save_parameters
 
 ACTION_LIST = [0, 1, 2, 3] # [up, down, left, right]
 ACTIONS_MAP = {
@@ -30,7 +29,18 @@ class PAL():
         self.epsilon = epsilon # epsilon greedy parameter
         self.temperature = temperature # temperature for softmax gradient
 
-        self.save_parameters() # save parameters in json file
+        parameters_dict = {
+            'n_environments': self.n_environments,
+            'max_iterations_per_environment': self.max_iterations_per_environment,
+            'n_episodes_per_iteration': self.n_episodes_per_iteration,
+            'max_epochs_per_episode': self.max_epochs_per_episode,
+            'learning_rate': self.lr,
+            'alpha': self.alpha,
+            'gamma': self.gamma,
+            'epsilon': self.epsilon,
+            'temperature': self.temperature
+            }
+        save_parameters(parameters_dict, algorithm='PAL') # save parameters in json file
 
         # initalize environment
         self.env = Environment(
@@ -64,61 +74,22 @@ class PAL():
             self.__train_loop_for_the_environment(environment_number=i+1)
 
             # checkpoint: save policy, policy states space and metrics in json file
-            self.save_policy(environment_number=i)
+            save_policy(policy=self.policy_agent.policy, states_space=self.policy_agent.states_space, 
+                algorithm='PAL', environment_number=i)
 
-            # reset and initialize new environment and model agent
-            self.env.reset_environment()
-            self.model_agent.reset_agent(
-                initial_state_coord=self.env.initial_state_coord, 
-                transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :])
+            if i < self.n_environments - 1:
+                # reset and initialize new environment and model agent
+                self.env.reset_environment()
+                self.model_agent.reset_agent(
+                    initial_state_coord=self.env.initial_state_coord, 
+                    transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :])
 
-            # reset transition probability matrix p
-            self.p = self.model_agent.transition_distribuition[self.model_agent.agent_state]
+                # reset transition probability matrix p
+                self.p = self.model_agent.transition_distribuition[self.model_agent.agent_state]
 
-            # reset policy agent at initial state
-            self.policy_agent.reset_at_initial_state(
-                transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :])
-    
-    def save_parameters(self):
-        # save parameters in json file
-        with open('parameters/PAL_parameters.json', 'w') as parameters_file:
-            json.dump({
-                'n_environments': self.n_environments,
-                'max_iterations_per_environment': self.max_iterations_per_environment,
-                'n_episodes_per_iteration': self.n_episodes_per_iteration,
-                'max_epochs_per_episode': self.max_epochs_per_episode,
-                'learning_rate': self.lr,
-                'alpha': self.alpha,
-                'gamma': self.gamma,
-                'epsilon': self.epsilon,
-                'temperature': self.temperature
-                }, parameters_file)
-        
-    def save_policy(self, environment_number):
-        # save final policy and policy states space in json file
-        with open(f'training_parameters/policy/PAL/PAL_policy_{environment_number}_env.json', 'w') as policy_file:
-            json.dump([row.tolist() for row in self.policy_agent.policy], policy_file)
-
-        with open(f'training_parameters/policy/PAL/PAL_states_space_{environment_number}_env.json', 'w') as states_space_file:
-            json.dump({str(key): value.tolist() for key, value in 
-            self.policy_agent.states_space.items()}, states_space_file)
-    
-    def save_metrics(self, environment_number, iteration_number, nash_equilibrium_found):
-        with open(f'training_parameters/metrics/PAL/PAL_metrics_{environment_number}_env_{iteration_number}_iter.json', 
-            'w') as metrics_file:
-            json.dump({
-                'environment_number': environment_number,
-                'iteration_number': iteration_number,
-                'kl_divergence': self.kl_divergence,
-                'cost_function': self.cost_function,
-                'best_model': self.optimal_model,
-                'nash_equilibrium_found': nash_equilibrium_found,
-                }, metrics_file)
-        
-        with open(
-            f'training_parameters/values_function/PAL/PAL_values_function_{environment_number}_env_{iteration_number}_iter.json', 'w') \
-            as value_function_file:
-            json.dump(self.model_agent.values_function, value_function_file)
+                # reset policy agent at initial state
+                self.policy_agent.reset_at_initial_state(
+                    transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :])
     
     def reset_at_initial_state(self):
         # reset agent's position in the environment
@@ -153,21 +124,41 @@ class PAL():
             self.model_agent.next_state_function = optimal_next_state_function
             self.model_agent.reward_function = optimal_reward_function
             self.model_agent.values_function = optimal_value_function
-            print(f'Model optimized: kl divergence: {self.kl_divergence[self.optimal_model]}')
+            print(f'Model optimized: kl divergence = {self.kl_divergence[self.optimal_model]}')
             
             # improve policy
             self.policy_agent.policy = policy 
             self.policy_agent.states_space = states_space_policy
-            print(f'Policy improved: cost function: {self.cost_function[self.optimal_model]}')
+            print(f'Policy improved: cost function = {self.cost_function[self.optimal_model]}')
 
             # stopping criteria: stop in nash equilibrium
             if self.__check_stackelberg_nash_equilibrium():
                 nash_equilibrium_found = True
                 print(f'\nStackelberg nash equilibrium reached after {i+1} iterations \n')
-                self.save_metrics(environment_number, iteration_number=i+1, nash_equilibrium_found=True)
+                metrics_dict = {
+                    'algorithm': 'PAL',
+                    'environment_number': environment_number,
+                    'iteration_number': i+1,
+                    'kl_divergence': self.kl_divergence,
+                    'cost_function': self.cost_function,
+                    'best_model': self.optimal_model,
+                    'nash_equilibrium_found': True,
+                    }
+                save_metrics(metrics_dict, model_values_function=self.model_agent.values_function, 
+                    environment_number=environment_number, iteration_number=i+1, algorithm='PAL')
                 break
-
-            self.save_metrics(environment_number, iteration_number=i+1, nash_equilibrium_found=False)
+            
+            metrics_dict = {
+                'algorithm': 'PAL',
+                'environment_number': environment_number,
+                'iteration_number': i+1,
+                'kl_divergence': self.kl_divergence,
+                'cost_function': self.cost_function,
+                'best_model': self.optimal_model,
+                'nash_equilibrium_found': False,
+                }
+            save_metrics(metrics_dict, model_values_function=self.model_agent.values_function, 
+                    environment_number=environment_number, iteration_number=i+1, algorithm='PAL')
 
         if not nash_equilibrium_found:
             print(f'\nStackelberg nash equilibrium not reached after {self.max_iterations_per_environment} iterations \n')

@@ -1,3 +1,4 @@
+import json
 import numpy as np
 import nashpy as nash
 from keras.losses import KLDivergence
@@ -33,6 +34,9 @@ def compute_model_loss(transition_probability_model, transition_probability_data
         y_pred=transition_probability_data[:transition_probability_model.shape[0], :]
         )
     loss = kl_div.sum() # sum over all actions
+    if loss < 0:
+        loss = 0.0 # avoid negative loss
+        print(f'Negative kl divergence detected: kl divergence = {loss}')
     return loss
 
 def kl_divergence(y_true, y_pred):
@@ -67,3 +71,27 @@ def stackelberg_nash_equilibrium(leader_payoffs, follower_payoffs):
         leader_probabilities, follower_strategy = -1, -1 # no equilibria found
 
     return np.array(follower_strategy)
+
+def save_parameters(parameters_dict:dict, algorithm:str):
+    # save parameters in json file
+    with open(f'parameters/{algorithm}_parameters.json', 'w') as parameters_file:
+        json.dump(parameters_dict, parameters_file)
+    
+def save_policy(policy, states_space, algorithm, environment_number):
+    # save final policy and policy states space in json file
+    with open(f'training_parameters/{algorithm}/policy/policy_{environment_number}_env.json', 'w') as policy_file:
+        json.dump([row.tolist() for row in policy], policy_file)
+
+    with open(f'training_parameters/{algorithm}/policy/states_space_{environment_number}_env.json', 
+        'w') as states_space_file:
+        json.dump({str(key): value.tolist() for key, value in states_space.items()}, states_space_file)
+
+def save_metrics(metrics_dict, model_values_function, environment_number, iteration_number, algorithm):
+    with open(f'training_parameters/{algorithm}/metrics/metrics_{environment_number}_env_{iteration_number}_iter.json', 
+        'w') as metrics_file:
+        json.dump(metrics_dict, metrics_file)
+    
+    with open(
+        f'training_parameters/{algorithm}/values_function/values_function_{environment_number}_env_{iteration_number}_iter.json', 
+        'w') as value_function_file:
+        json.dump(model_values_function, value_function_file)
