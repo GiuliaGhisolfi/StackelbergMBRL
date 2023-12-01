@@ -63,7 +63,7 @@ class PAL():
             # train loop for the environment
             self.__train_loop_for_the_environment(environment_number=i+1)
 
-            # checkpoint: save policy and policy states space in json file
+            # checkpoint: save policy, policy states space and metrics in json file
             self.save_policy(environment_number=i)
 
             # reset and initialize new environment and model agent
@@ -78,13 +78,10 @@ class PAL():
             # reset policy agent at initial state
             self.policy_agent.reset_at_initial_state(
                 transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :])
-        
-        # save final policy and policy states space in json file
-        self.save_policy(environment_number=i+1)
     
     def save_parameters(self):
         # save parameters in json file
-        with open('src/parameters/PAL_parameters.json', 'w') as parameters_file:
+        with open('parameters/PAL_parameters.json', 'w') as parameters_file:
             json.dump({
                 'n_environments': self.n_environments,
                 'max_iterations_per_environment': self.max_iterations_per_environment,
@@ -99,12 +96,27 @@ class PAL():
         
     def save_policy(self, environment_number):
         # save final policy and policy states space in json file
-        with open(f'src/saved_policy/PAL_policy_{environment_number}_env.json', 'w') as policy_file:
+        with open(f'policy/PAL/policy_{environment_number}_env.json', 'w') as policy_file:
             json.dump([row.tolist() for row in self.policy_agent.policy], policy_file)
 
-        with open(f'src/saved_policy/PAL_states_space_{environment_number}_env.json', 'w') as states_space_file:
+        with open(f'policy/PAL/states_space_{environment_number}_env.json', 'w') as states_space_file:
             json.dump({str(key): value.tolist() for key, value in 
             self.policy_agent.states_space.items()}, states_space_file)
+    
+    def save_metrics(self, environment_number, iteration_numer, nash_equilibrium_found):
+        with open(f'metrics/PAL/metrics_{environment_number}_env_{iteration_numer}_iter.json', 'w') as metrics_file:
+            json.dump({
+                'environment_number': environment_number,
+                'iteration_number': iteration_numer,
+                'kl_divergence': self.kl_divergence,
+                'cost_function': self.cost_function,
+                'best_model': self.optimal_model,
+                'nash_equilibrium_found': nash_equilibrium_found,
+                }, metrics_file)
+        
+        with open(f'metrics/PAL/PAL_values_function_{environment_number}_env_{iteration_numer}_iter.json', 
+            'w') as value_function_file:
+            json.dump(self.model_agent.values_function, value_function_file)
     
     def reset_at_initial_state(self):
         # reset agent's position in the environment
@@ -150,7 +162,11 @@ class PAL():
             if self.__check_stackelberg_nash_equilibrium():
                 nash_equilibrium_found = True
                 print(f'\nStackelberg nash equilibrium reached after {i+1} iterations \n')
+                self.save_metrics(self, environment_number, iteration_numer=i+1, nash_equilibrium_found=True)
                 break
+
+            self.save_metrics(self, environment_number, iteration_numer=i+1, nash_equilibrium_found=False)
+
         if not nash_equilibrium_found:
             print(f'\nStackelberg nash equilibrium not reached after {self.max_iterations_per_environment} iterations \n')
         
