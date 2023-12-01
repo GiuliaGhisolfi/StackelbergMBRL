@@ -32,7 +32,7 @@ if __name__ == '__main__':
     n_environments = 5 # number of different environments to train on
     max_iterations_per_environment = 5
     n_episodes_per_iteration = 5 # number of episodes to run for each epoch
-    max_epochs_per_episode = 600
+    max_epochs_per_episode = 6000
     learning_rate = 0.1
     epsilon = 0.1 # epsilon for epsilon-greedy policy
     temperature = 1 # temperature for softmax policy

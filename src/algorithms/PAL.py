@@ -122,7 +122,7 @@ class PAL():
             data_buffer = [] # list of episodes, each episode is a list of tuples (state, action, reward, next_state)
 
             # collect data executing policy in the environment
-            for i in range(self.n_episodes_per_iteration):
+            for _ in range(self.n_episodes_per_iteration):
                 episode = self.executing_policy()
                 data_buffer.append(episode)
                 self.reset_at_initial_state() # reset environment and agent state
@@ -149,10 +149,10 @@ class PAL():
             # stopping criteria: stop in nash equilibrium
             if self.__check_stackelberg_nash_equilibrium():
                 nash_equilibrium_found = True
-                print(f'\nStackelberg nash equilibrium reached after {i+1} epochs \n')
+                print(f'\nStackelberg nash equilibrium reached after {i+1} iterations \n')
                 break
         if not nash_equilibrium_found:
-            print(f'\nStackelberg nash equilibrium not reached after {self.max_iterations_per_environment} epochs \n')
+            print(f'\nStackelberg nash equilibrium not reached after {self.max_iterations_per_environment} iterations \n')
         
     def executing_policy(self):
         """
