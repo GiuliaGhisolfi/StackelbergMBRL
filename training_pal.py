@@ -29,10 +29,10 @@ if __name__ == '__main__':
     alpha = 0.01 # learning rate for policy improvment
 
     # training parameters
-    n_environments = 5 # number of different environments to train on
-    max_iterations_per_environment = 5
-    n_episodes_per_iteration = 5 # number of episodes to run for each epoch
-    max_epochs_per_episode = 6000
+    n_environments = 2 # number of different environments to train on
+    max_iterations_per_environment = 2
+    n_episodes_per_iteration = 2 # number of episodes to run for each epoch
+    max_epochs_per_episode = 60
     learning_rate = 0.1
     epsilon = 0.1 # epsilon for epsilon-greedy policy
     temperature = 1 # temperature for softmax policy
