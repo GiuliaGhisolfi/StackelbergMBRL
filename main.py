@@ -22,8 +22,8 @@ def main(maze_width, maze_height, max_epochs, algorithm, n_episodes_per_iteratio
 
 if __name__ == '__main__':
     # maze parameters
-    maze_width = 11
-    maze_height = 7
+    maze_width = 51
+    maze_height = 27
     render = True
     render_wait = 0 # time to wait between frames in ms
 
@@ -52,6 +52,6 @@ if __name__ == '__main__':
         beta=beta,
         render=render,
         render_wait=render_wait,
-        policy_path='training_parameters/PAL/policy/policy_1_env.json', 
-        states_space_path='training_parameters/PAL/policy/states_space_1_env.json'
+        policy_path='training_parameters/PAL/policy/policy_18_env.json', 
+        states_space_path='training_parameters/PAL/policy/states_space_18_env.json'
     )
