@@ -1,1 +1,1 @@
-{"algorithm": "PAL", "environment_number": 1, "iteration_number": 1, "kl_divergence": [0.0, 0.0], "cost_function": [4827.131830034682, 4535.675475980302], "best_model": 0, "nash_equilibrium_found": true}
+{"algorithm": "PAL", "environment_number": 1, "iteration_number": 1, "kl_divergence": [4.723458668598154e-09, 0.0004368614381598558], "cost_function": [2.8449838293989784, 1.3335367583920454], "best_model": 0, "nash_equilibrium_found": true}

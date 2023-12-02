@@ -35,8 +35,8 @@ def compute_model_loss(transition_probability_model, transition_probability_data
         )
     loss = kl_div.sum() # sum over all actions
     if loss < 0:
-        loss = 0.0 # avoid negative loss
         print(f'Negative kl divergence detected: kl divergence = {loss}')
+        loss = 0.0 # avoid negative loss
     return loss
 
 def kl_divergence(y_true, y_pred):
@@ -94,4 +94,4 @@ def save_metrics(metrics_dict, model_values_function, environment_number, iterat
     with open(
         f'training_parameters/{algorithm}/values_function/values_function_{environment_number}_env_{iteration_number}_iter.json', 
         'w') as value_function_file:
-        json.dump(model_values_function, value_function_file)
+        json.dump({str(key): value.tolist() for key, value in model_values_function.items()}, value_function_file)

@@ -12,6 +12,12 @@ ACTIONS_MAP = {
     2: [2, 0, 1, 3], 
     3: [0, 2, 3, 1]
     } # actions map from agent's pov
+WALLS_MAP = {
+    0: np.array([2, 0, 3, 1]), # up action:    right, down, left, up
+    1: np.array([3, 1, 2, 0]), # down action:  left, up, right, down
+    2: np.array([1, 2, 0, 3]), # left action:  down, left, up, right
+    3: np.array([0, 3, 1, 2])  # right action: up, right, down, left
+}
 
 class PAL():
     # PAL: Policy As Leader Algorithm
@@ -247,11 +253,18 @@ class PAL():
             self.kl_divergence.append(local_loss) # in [0, +inf]
 
             # compute policy parameters for policy improvement
+            if len(self.model_agent.values_function) > 1:
+                model_values_function = np.array(list(self.model_agent.values_function.values()))
+            else: # if only one state in the episode
+                model_values_function = np.array(list(self.model_agent.values_function.values())).reshape(1, -1)
+            
             advantages_model = np.array(list(temp_value_function.values())) - \
-                np.concatenate((list(self.model_agent.values_function.values()), 
-                np.zeros(len(temp_value_function) - len(self.model_agent.values_function))))
+                np.concatenate((list(model_values_function), 
+                np.zeros((len(temp_value_function) - len(self.model_agent.values_function), len(ACTION_LIST)) )))
+            
             temp_policy, temp_states_space_policy, advantages = self.__improve_policy_from_episode(episode,
                 advantages_model=advantages_model, states_space_model=temp_states_space_model)
+            
             local_cost_function = compute_actor_critic_objective(temp_policy, advantages)
 
             if local_cost_function > cost_function:
@@ -285,7 +298,7 @@ class PAL():
         for state, action, reward, next_state in episode:
             if state not in temp_states_space.keys():
                 temp_states_space[state] = states_model_space_dim 
-                temp_value_function[states_model_space_dim] = 0 # init value function
+                temp_value_function[states_model_space_dim] = np.zeros(len(ACTION_LIST)) # init value function
                 states_model_space_dim += 1
 
         # initialize transition probability matrix 
@@ -306,12 +319,12 @@ class PAL():
 
             # update value function using TD learning
             if next_state in temp_states_space.keys():
-                td_error = reward + (self.gamma  * temp_value_function[temp_states_space[next_state]] - 
-                    temp_value_function[temp_states_space[state]])
+                td_error = reward + (self.gamma  * temp_value_function[temp_states_space[next_state]][action] - 
+                    temp_value_function[temp_states_space[state]][action])
             else:
-                td_error = reward - temp_value_function[temp_states_space[state]]
+                td_error = reward - temp_value_function[temp_states_space[state]][action]
 
-            temp_value_function[temp_states_space[state]] += self.alpha * td_error
+            temp_value_function[temp_states_space[state]][action] += self.alpha * td_error
 
             # update transition probability matrix
             gradient = softmax_gradient(policy=q_weights[temp_states_space[state], :], action=action, 
@@ -334,7 +347,7 @@ class PAL():
         temp_policy = self.policy_agent.policy.copy()
         temp_states_space_policy = self.policy_agent.states_space.copy()
         previous_action = self.policy_agent.fittizial_first_action
-        advantages_policy = np.zeros(len(temp_states_space_policy)) # cumulative temporal difference error
+        advantages_policy = np.zeros((len(temp_states_space_policy), len(ACTION_LIST))) # cumulative temporal difference error
             
         for state, action, reward, next_state in episode:
             # transition probability matrix of the environment
@@ -358,7 +371,7 @@ class PAL():
         return temp_policy, temp_states_space_policy, advantages_policy
     
     def __update_policy(self, state, policy:list, states_space_policy:dict, action:int, previous_action:int,
-        advantages_model:list, states_space_model:dict, advantages_policy:list):
+        advantages_model:list, states_space_model:dict, advantages_policy:np.ndarray):
 
         state_not_walls = self.policy_agent.compute_walls_from_transition_matrix(
             previous_action, self.env.p[:, self.env.state_from_coordinates(state[0], state[1]), :])
@@ -380,17 +393,20 @@ class PAL():
             policy.append(policy)
             
             # update advantages vector
-            advantages_policy = np.concatenate((advantages_policy, np.zeros(1)))
+            advantages_policy = np.concatenate((advantages_policy, np.zeros(len(ACTION_LIST))))
 
         # policy improvement using actor-critic
         action_agent_pov = ACTIONS_MAP[previous_action][action]
         gradient = softmax_gradient(policy=policy[state_not_walls_index[0]], 
             action=action_agent_pov, temperature=self.temperature)
         gradient = np.multiply(gradient, state_not_walls)
-        policy[state_not_walls_index[0]] += self.lr * gradient * advantages_model[states_space_model[state]]
+        # stochastic gradient ascent
+        policy[state_not_walls_index[0]] += self.lr * gradient * advantages_model[
+            states_space_model[state]][WALLS_MAP[previous_action]]
         
         # update advantages vector
-        advantages_policy[state_not_walls_index[0]] += advantages_model[states_space_model[state]]
+        advantages_policy[state_not_walls_index[0]] += advantages_model[
+            states_space_model[state]][WALLS_MAP[previous_action]]
 
         return policy, states_space_policy, advantages_policy
 
