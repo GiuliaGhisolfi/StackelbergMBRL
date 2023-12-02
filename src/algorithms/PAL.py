@@ -376,11 +376,11 @@ class PAL():
         state_not_walls = self.policy_agent.compute_walls_from_transition_matrix(
             previous_action, self.env.p[:, self.env.state_from_coordinates(state[0], state[1]), :])
 
-        # check if state and next_state are already in the states space and get their index
+        # check if state is already in the states space and get their index
         state_not_walls_index = [key for key, value in states_space_policy.items()
             if np.equal(value, state_not_walls).all()]
 
-        if len(state_not_walls_index) < 1:
+        if len(state_not_walls_index) < 1: # if not, add it
             # add new states to states space
             states_space_policy[len(states_space_policy)] = state_not_walls
             
