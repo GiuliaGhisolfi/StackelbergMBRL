@@ -17,6 +17,7 @@ class ModelAgent(Agent):
     
     def reset_agent(self, initial_state_coord):
         self.__init__(
+            gamma=self.gamma,
             initial_state_coord=initial_state_coord,
         )
     

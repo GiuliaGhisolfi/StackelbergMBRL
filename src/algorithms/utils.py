@@ -3,6 +3,7 @@ import numpy as np
 import nashpy as nash
 from keras.losses import KLDivergence
 
+###### GENERAL FUNCTIONS FOR PAL ######
 def softmax_gradient(policy, action):
     # compute softmax probabilities
     probabilities = softmax(policy)
@@ -57,8 +58,8 @@ def compute_actor_critic_objective(policy_probs, advantages):
 
     return objective # cost function value
 
-def check_stackelberg_nash_equilibrium(leader_payoffs, follower_payoffs, 
-    optimal_leader, optimal_follower):
+###### NASH EQUILIBRIUM FUNCTIONS ######
+def check_stackelberg_nash_equilibrium(leader_payoffs, follower_payoffs, target_value):
     """
     Check if the policy is at Stackelberg-Nash equilibrium, 
     knowing all possible transition distribuition from the model and the policy
@@ -71,7 +72,7 @@ def check_stackelberg_nash_equilibrium(leader_payoffs, follower_payoffs,
         follower_payoffs=follower_payoffs
         ) != 0)
 
-    return (optimal_leader, optimal_follower) in equilibria
+    return target_value in equilibria
 
 def stackelberg_nash_equilibrium(leader_payoffs, follower_payoffs):
     # initialize the game
@@ -88,8 +89,7 @@ def stackelberg_nash_equilibrium(leader_payoffs, follower_payoffs):
 
     return np.array(follower_strategy)
 
-
-
+###### SAVE AND LOAD FUNCTIONS ######
 def save_parameters(parameters_dict:dict, algorithm:str):
     # save parameters in json file
     with open(f'parameters/{algorithm}_parameters.json', 'w') as parameters_file:

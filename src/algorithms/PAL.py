@@ -20,7 +20,7 @@ class PAL(MazeSolverAlgorithm):
         for i in range(self.n_environments):
             print(f'\nTraining on environment {i+1}/{self.n_environments}')
             # train loop for the environment
-            self.__train_loop_for_the_environment(environment_number=i+1)
+            self.train_loop_for_the_environment(environment_number=i+1)
 
             # checkpoint: save policy, policy states space and metrics in json file
             save_policy(policy=self.policy_agent.policy, states_space=self.policy_agent.states_space, 
@@ -33,37 +33,25 @@ class PAL(MazeSolverAlgorithm):
                     initial_state_coord=self.env.initial_state_coord, 
                     transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :])
 
-                # reset transition probability matrix p
-                self.p = self.model_agent.transition_distribuition[self.model_agent.agent_state]
-
                 # reset policy agent at initial state
                 self.policy_agent.reset_at_initial_state(
                     transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :])
  
-    def __train_loop_for_the_environment(self, environment_number):
+    def train_loop_for_the_environment(self, environment_number):
         nash_equilibrium_found = False
         for i in range(self.max_iterations_per_environment):
             print(f'\nIteration {i+1}/{self.max_iterations_per_environment} for environment {environment_number}')
-            data_buffer = [] # list of episodes, each episode is a list of tuples (state, action, reward, next_state)
-
+            
             # collect data executing policy in the environment
+            data_buffer = [] # list of episodes, episode: list of tuples (state, action, reward, next_state)
             for _ in range(self.n_episodes_per_iteration):
                 episode = self.executing_policy()
                 data_buffer.append(episode)
                 self.reset_at_initial_state() # reset environment and agent state
             print(f'Collected {len(data_buffer)} episodes')
             
-            # compute parameters to optimize model and improve policy
-            p = np.array(self.model_agent.transition_distribuition) # transition probability matrix
-            q_optimal, states_space_model, optimal_reward_function, optimal_next_state_function, \
-                optimal_value_function, policy, states_space_policy = self.__optimize_model_and_improve_policy(data_buffer, p)
-            
             # build policy-specific model
-            self.model_agent.transition_distribuition = q_optimal
-            self.model_agent.states_space = states_space_model
-            self.model_agent.next_state_function = optimal_next_state_function
-            self.model_agent.reward_function = optimal_reward_function
-            self.model_agent.quality_function = optimal_value_function
+            
             print(f'Model optimized: kl divergence = {self.kl_divergence[self.optimal_model]}')
             
             # improve policy
@@ -72,7 +60,7 @@ class PAL(MazeSolverAlgorithm):
             print(f'Policy improved: cost function = {self.cost_function[self.optimal_model]}')
 
             # stopping criteria: stop in nash equilibrium
-            if self.__check_stackelberg_nash_equilibrium():
+            if self.check_stackelberg_nash_equilibrium():
                 nash_equilibrium_found = True
                 print(f'\nStackelberg nash equilibrium reached after {i+1} iterations \n')
                 metrics_dict = {

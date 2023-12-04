@@ -1,6 +1,5 @@
 import numpy as np
 
-N_ACTIONS = 4
 ACTIONS_LIST = [0, 1, 2, 3] # [up, down, left, right]
 WALLS_MAP = {
     0: np.array([2, 0, 3, 1]), # up action:    right, down, left, up
