@@ -1,6 +1,6 @@
 import numpy as np
 from src.algorithms.maze_solver_algorithm import MazeSolverAlgorithm
-from src.algorithms.utils import softmax_gradient, softmax, check_stackelberg_nash_equilibrium, \
+from src.algorithms.utils import softmax_gradient, softmax, check_stackelberg_nash_equilibrium_PAL, \
     compute_model_loss, compute_actor_critic_objective, save_metrics, save_policy
 
 N_ACTIONS = 4
@@ -39,7 +39,7 @@ class PAL(MazeSolverAlgorithm):
 
             # checkpoint: save policy, policy states space and metrics in json file
             save_policy(policy=self.policy_agent.policy, states_space=self.policy_agent.states_space, 
-                algorithm=self.algoritm, environment_number=i)
+                algorithm='PAL', environment_number=i)
 
             if i < self.n_environments - 1:
                 # reset and initialize new environment and model agent
@@ -84,8 +84,9 @@ class PAL(MazeSolverAlgorithm):
             print(f'Policy improved: cost function = {self.cost_function[self.optimal_model]}')
 
             # stopping criteria: stop in nash equilibrium
-            if check_stackelberg_nash_equilibrium(leader_payoffs=self.kl_divergence,
-                follower_payoffs=self.cost_function, target_value=self.best_model):
+            if check_stackelberg_nash_equilibrium_PAL(leader_payoffs=self.kl_divergence,
+                follower_payoffs=self.cost_function, leader_target_value=self.optimal_policy_agent, 
+                follower_target_value=self.optimal_model):
                 nash_equilibrium_found = True
                 print(f'\nStackelberg nash equilibrium reached after {i+1} iterations \n')
                 metrics_dict = {
@@ -178,6 +179,7 @@ class PAL(MazeSolverAlgorithm):
 
             if local_cost_function > cost_function:
                 cost_function = local_cost_function
+                self.optimal_policy_agent = i
                 optimal_policy = temp_policy
                 states_space_policy = temp_states_space_policy
             self.cost_function.append(local_cost_function)
@@ -236,8 +238,7 @@ class PAL(MazeSolverAlgorithm):
             temp_value_function[temp_states_space[state]][action] += self.alpha * td_error
 
             # update transition probability matrix
-            gradient = softmax_gradient(policy=q_weights[temp_states_space[state], :], action=action, 
-                temperature=self.temperature)
+            gradient = softmax_gradient(policy=q_weights[temp_states_space[state], :], action=action)
             q_weights[temp_states_space[state], :] += temp_value_function[temp_states_space[state]] * gradient
 
             # update mask
@@ -307,7 +308,7 @@ class PAL(MazeSolverAlgorithm):
         # policy improvement using actor-critic
         action_agent_pov = ACTIONS_MAP[previous_action][action]
         gradient = softmax_gradient(policy=policy[state_not_walls_index[0]], 
-            action=action_agent_pov, temperature=self.temperature)
+            action=action_agent_pov)
         gradient = np.multiply(gradient, state_not_walls)
         # stochastic gradient ascent
         policy[state_not_walls_index[0]] += self.lr * gradient * advantages_model[

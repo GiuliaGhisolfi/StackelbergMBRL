@@ -55,7 +55,8 @@ class MazeSolverAlgorithm():
         # initialize model and policy agents
         self.model_agent = ModelAgent(
             gamma=gamma,
-            initial_state_coord=self.env.initial_state_coord
+            initial_state_coord=self.env.initial_state_coord,
+            transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :]
             )
         self.policy_agent = PolicyAgent(
             gamma=gamma,

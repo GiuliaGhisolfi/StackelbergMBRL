@@ -1,6 +1,6 @@
 import numpy as np
 from src.algorithms.maze_solver_algorithm import MazeSolverAlgorithm
-from src.algorithms.utils import save_metrics, save_policy, check_stackelberg_nash_equilibrium
+from src.algorithms.utils import save_metrics, save_policy, check_stackelberg_nash_equilibrium_MAL
 
 N_ACTIONS = 4
 ACTION_LIST = [0, 1, 2, 3] # [up, down, left, right]
@@ -44,7 +44,7 @@ class MAL(MazeSolverAlgorithm):
             print(f'\nIteration {i+1}/{self.max_iterations_per_environment} for environment {environment_number}')
 
             # optimize policy
-            policy = self.optimize_policy(quality_function=self.model_agent.quality_function)
+            policy = self.optimize_policy()
             policy_cost_function = self.compute_policy_cost_function(policy=policy,
                 quality_function=self.model_agent.quality_function)
             self.policy_agent.policy = policy
@@ -78,7 +78,7 @@ class MAL(MazeSolverAlgorithm):
 
             # stopping criterion
             follower_payoffs = policy_cost_function * np.ones(len(model_loss_list))
-            if check_stackelberg_nash_equilibrium(leader_payoffs=model_loss_list, 
+            if check_stackelberg_nash_equilibrium_MAL(leader_payoffs=model_loss_list, 
                 follower_payoffs=follower_payoffs, target_value=optimal_model):
                 print('Stackelberg-Nash equilibrium reached')
                 metrics_dict = {
@@ -108,7 +108,7 @@ class MAL(MazeSolverAlgorithm):
                     environment_number=environment_number, iteration_number=i+1, algorithm='MAL')
     
     ###### policy optimization ######
-    def optimize_policy(self, quality_function):
+    def optimize_policy(self):
         """
         Optimize policy using gradient ascent
 
@@ -120,6 +120,7 @@ class MAL(MazeSolverAlgorithm):
         """
         # compute policy from model's quality function
         policy = self.policy_agent.policy.copy()
+        quality_function = self.model_agent.quality_function.copy()
 
         # compute policy gradient
         policy_gradient = self.compute_policy_gradient(policy=policy, 
@@ -141,8 +142,10 @@ class MAL(MazeSolverAlgorithm):
     def compute_advantege_function(self, quality_function, policy):
         # compute advantage function from quality function
         quality_function_policy = self.compute_quality_function_policy(quality_function)
-        value_function_approx = np.sum(quality_function_policy * policy, axis=1)
-        return np.max(quality_function_policy, axis=1) - value_function_approx
+        value_function_approx = np.sum(np.concatenate((quality_function_policy, np.zeros((
+            len(self.policy_agent.states_space)-len(quality_function_policy), N_ACTIONS))), axis=0)
+            * policy, axis=1).reshape(-1,1)
+        return quality_function_policy - np.ones(quality_function_policy.shape) * value_function_approx
     
     def compute_quality_function_policy(self, quality_function):
         # map function := {((x,y), previous_action): state_policy}
@@ -213,5 +216,6 @@ class MAL(MazeSolverAlgorithm):
         def mse(y_true, y_pred):
             return np.mean(np.power(y_true - y_pred, 2))
         
-        return mse(np.array(list(self.model_agent.quality_function.values())), 
+        return mse(np.concatenate((np.array(list(self.model_agent.quality_function.values())),                
+            np.zeros((len(quality_function)-len(self.model_agent.quality_function), N_ACTIONS))), axis=0),
             np.array(list(quality_function.values()))[:len(self.model_agent.quality_function)])
