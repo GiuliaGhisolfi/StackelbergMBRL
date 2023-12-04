@@ -7,57 +7,18 @@ ACTIONS_LIST = [0, 1, 2, 3] # [up, down, left, right]
 
 class ModelAgent(Agent):
     # ricreo environment con modello approssimato
-    def __init__(self, gamma, initial_state_coord, transition_matrix_initial_state):
+    def __init__(self, gamma, initial_state_coord):
         super().__init__(initial_state_coord=initial_state_coord)
 
-        # initialize model
-        self.gamma = gamma # discount factor
-        self.agent_state = 0 # initial state
-        self.transition_distribuition = [] # P(A|S) transition_distribuition[state] = probability distribution over actions
-        self.__update_actions_distribuition(transition_matrix_initial_state)
-        self.next_state_function = dict()
-        self.reward_function = dict()
-        self.states_space = dict() # S: {(x,y): state number}
-        self.values_function = dict() # V: {state: value np.darray}
-        self.__update_states_space(initial_state_coord)
+        # initialize model agent
+        self.gamma = gamma # discount factor    
+        self.quality_function = dict() # Q := {(x,y): actions values (np.darray)}
+        self.quality_function[initial_state_coord] = np.zeros(N_ACTIONS) # initialize quality function at initial state
     
-    def step(self, action, reward, next_state_coord): #TODO: togliere se non viene usato
-        self.__update_states_space(state_coord=next_state_coord)
-        next_state = self.states_space[next_state_coord]
-
-        self.__update_next_state_function(state=self.agent_state, action=action, next_state=next_state)
-        self.__update_reward_function(state=self.agent_state, action=action, reward=reward)
-
-        self.agent_state = next_state
-    
-    def reset_agent(self, initial_state_coord, transition_matrix_initial_state):
+    def reset_agent(self, initial_state_coord):
         self.__init__(
-            gamma=self.gamma, 
             initial_state_coord=initial_state_coord,
-            transition_matrix_initial_state=transition_matrix_initial_state
         )
-    
-    def __update_actions_distribuition(self, transition_matrix):
-        # P(A|S)
-        if self.agent_state not in range(len(self.transition_distribuition)):
-            self.transition_distribuition.append(np.array([0 if i not in np.where(
-                transition_matrix != 0)[1] else 1 for i in range(N_ACTIONS)], dtype=np.float64))
-            self.transition_distribuition[self.agent_state] /= np.sum(
-                self.transition_distribuition[self.agent_state])
-
-    def __update_next_state_function(self, state, action, next_state):
-        # S, A -> S': deterministica
-        self.next_state_function[(state, action)] = next_state
-
-    def __update_reward_function(self, state, action, reward):
-        # S, A -> R
-        self.reward_function[(state, action)] = reward
-    
-    def __update_states_space(self, state_coord):
-        # state_coord from environment: (x,y) -> state in S
-        if state_coord not in self.states_space.keys():
-            self.states_space[state_coord] = self.agent_state
-            self.values_function[self.agent_state] = np.zeros(N_ACTIONS)
     
     def __compute_reward_function(self, episode):
         """

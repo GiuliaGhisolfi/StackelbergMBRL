@@ -1,63 +1,17 @@
 import numpy as np
-from src.agents.model_agent import ModelAgent
-from src.agents.policy_agent import PolicyAgent
-from src.environment.environment import Environment
-from src.algorithms.utils import softmax_gradient, softmax, stackelberg_nash_equilibrium, \
-    compute_model_loss, compute_actor_critic_objective, save_metrics, save_policy, save_parameters
+from src.algorithms.maze_solver_algorithm import MazeSolverAlgorithm
+from src.algorithms.utils import save_metrics, save_policy, check_stackelberg_nash_equilibrium
 
-ACTION_LIST = [0, 1, 2, 3] # [up, down, left, right]
-
-class MAL():
+class MAL(MazeSolverAlgorithm):
     # MAL: Model As Leader Algorithm
 
     def __init__(self, learning_rate, n_environments, max_iterations_per_environment, n_episodes_per_iteration, 
-        max_epochs_per_episode, maze_width, maze_height, beta, gamma, epsilon, temperature):
+        max_epochs_per_episode, maze_width, maze_height, alpha, gamma, epsilon):
 
-        self.n_environments = n_environments
-        self.max_iterations_per_environment = max_iterations_per_environment
-        self.n_episodes_per_iteration = n_episodes_per_iteration
-        self.max_epochs_per_episode = max_epochs_per_episode
-        self.lr = learning_rate # learning rate for policy improvement
-        self.beta = beta # alpha, learning rate for value function update
-        self.gamma = gamma # discount factor to compute expected cumulative reward
-        self.epsilon = epsilon # epsilon greedy parameter
-        self.temperature = temperature # temperature for softmax gradient
-
-        parameters_dict = {
-            'n_environments': self.n_environments,
-            'max_iterations_per_environment': self.max_iterations_per_environment,
-            'n_episodes_per_iteration': self.n_episodes_per_iteration,
-            'max_epochs_per_episode': self.max_epochs_per_episode,
-            'learning_rate': self.lr,
-            'alpha': self.beta,
-            'gamma': self.gamma,
-            'epsilon': self.epsilon,
-            'temperature': self.temperature
-            }
-        save_parameters(parameters_dict, algorithm='PAL') # save parameters in json file
-
-        # initalize environment
-        self.env = Environment(
-            maze_width=maze_width,
-            maze_height=maze_height
-            )
-
-        # initialize model and policy agents
-        self.model_agent = ModelAgent(
-            gamma=gamma,
-            transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :],
-            initial_state_coord=self.env.initial_state_coord
-            )
-        self.policy_agent = PolicyAgent(
-            gamma=gamma,
-            transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :],
-            epsilon=epsilon
-            )
-        print('Agents initialized')
-
-        # transition probability matrix
-        self.p = self.model_agent.transition_distribuition[
-            self.model_agent.agent_state]
+        super().__init__(algorithm='MAL', learning_rate=learning_rate, n_environments=n_environments, 
+            max_iterations_per_environment=max_iterations_per_environment, n_episodes_per_iteration=n_episodes_per_iteration, 
+            max_epochs_per_episode=max_epochs_per_episode, maze_width=maze_width, maze_height=maze_height, 
+            alpha=alpha, gamma=gamma, epsilon=epsilon)
     
     def train(self):
         # train loop over n_environments environments
@@ -65,7 +19,7 @@ class MAL():
         for i in range(self.n_environments):
             print(f'\nTraining on environment {i+1}/{self.n_environments}')
             # train loop for the environment
-            self.__train_loop_for_the_environment(environment_number=i+1)
+            self.train_loop_for_the_environment(environment_number=i+1)
 
             # checkpoint: save policy, policy states space and metrics in json file
             save_policy(policy=self.policy_agent.policy, states_space=self.policy_agent.states_space, 
@@ -75,53 +29,56 @@ class MAL():
                 # reset and initialize new environment and model agent
                 self.env.reset_environment()
                 self.model_agent.reset_agent(
-                    initial_state_coord=self.env.initial_state_coord, 
-                    transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :])
-
-                # reset transition probability matrix p
-                self.p = self.model_agent.transition_distribuition[self.model_agent.agent_state]
+                    initial_state_coord=self.env.initial_state_coord)
 
                 # reset policy agent at initial state
                 self.policy_agent.reset_at_initial_state(
                     transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :])
     
-    def reset_at_initial_state(self):
-        # reset agent's position in the environment
-        self.env.reset()
-
-        # reset agent state at initial state
-        self.model_agent.agent_state = 0
-        self.policy_agent.reset_at_initial_state(
-            transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :])
-    
-    def __train_loop_for_the_environment(self, environment_number):
+    def train_loop_for_the_environment(self, environment_number):
         # train loop for the environment
         for i in range(self.max_iterations_per_environment):
-            print(f'\nIteration {i+1}/{self.max_iterations_per_environment}')
-            # train loop for the iteration
-            self.__train_loop_for_the_iteration(environment_number=environment_number, iteration_number=i+1)
-
-            # TODO: update
-
-    def __train_loop_for_the_iteration(self, environment_number, iteration_number):
-        nash_equilibrium_found = False
-        for i in range(self.max_iterations_per_environment):
             print(f'\nIteration {i+1}/{self.max_iterations_per_environment} for environment {environment_number}')
-            data_buffer = [] # list of episodes, each episode is a list of tuples (state, action, reward, next_state)
+
+            # optimize policy
+            policy = self.optimize_policy(quality_function=self.model_agent.quality_function)
+            policy_cost_function_list = [self.compute_policy_cost_function(policy=policy,
+                quality_function=self.model_agent.quality_function)]
+            optimal_policy = 0
+            self.policy_agent.policy = policy
+            print('Policy optimized')
 
             # collect data executing policy in the environment
+            data_buffer = [] # list of episodes, episode: list of tuples (state, action, reward, next_state)
             for _ in range(self.n_episodes_per_iteration):
                 episode = self.executing_policy()
                 data_buffer.append(episode)
                 self.reset_at_initial_state() # reset environment and agent state
             print(f'Collected {len(data_buffer)} episodes')
- 
-########################################################################################################
-def optimize_policy(policy, model, env):
-    # optimize policy massimizing reward given the model
-    #policy = argmax
-    return policy
 
-def improve_model(model, policy, data_buffer, beta):
-    # improve model using Gradient Descent
-    return model
+            # improve model
+            model_loss = np.inf
+            model_loss_list = []
+            optimal_model = -1
+
+            for i, episode in enumerate(data_buffer):
+                quality_function = self.improve_model(episode=episode)
+                local_model_loss = self.compute_model_loss(quality_function=quality_function)
+
+                if local_model_loss < model_loss:
+                    model_loss = local_model_loss
+                    optimal_quality_function = quality_function
+                    optimal_model = i
+
+                model_loss_list.append(-local_model_loss)
+            self.model_agent.quality_function = optimal_quality_function
+            print('Model optimized')
+
+            if check_stackelberg_nash_equilibrium(leader_payoffs=model_loss_list, 
+                follower_payoffs=policy_cost_function_list, optimal_leader=optimal_model,
+                optimal_follower=optimal_policy):
+                print('Stackelberg-Nash equilibrium reached') # FIXME: payoff della stessa lunghezza
+                #TODO: save metrics
+                break
+            else:
+                print('Stackelberg-Nash equilibrium not reached')

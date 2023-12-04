@@ -3,9 +3,9 @@ import numpy as np
 import nashpy as nash
 from keras.losses import KLDivergence
 
-def softmax_gradient(policy, action, temperature):
+def softmax_gradient(policy, action):
     # compute softmax probabilities
-    probabilities = softmax(policy / temperature)
+    probabilities = softmax(policy)
 
     # compute softmax gradient
     gradient = np.zeros_like(probabilities)
@@ -57,6 +57,22 @@ def compute_actor_critic_objective(policy_probs, advantages):
 
     return objective # cost function value
 
+def check_stackelberg_nash_equilibrium(leader_payoffs, follower_payoffs, 
+    optimal_leader, optimal_follower):
+    """
+    Check if the policy is at Stackelberg-Nash equilibrium, 
+    knowing all possible transition distribuition from the model and the policy
+
+    Returns:
+        (bool): True if the policy is at nash equilibrium, False otherwise
+    """
+    equilibria = np.where(stackelberg_nash_equilibrium(
+        leader_payoffs=leader_payoffs,
+        follower_payoffs=follower_payoffs
+        ) != 0)
+
+    return (optimal_leader, optimal_follower) in equilibria
+
 def stackelberg_nash_equilibrium(leader_payoffs, follower_payoffs):
     # initialize the game
     game = nash.Game([leader_payoffs], [follower_payoffs])
@@ -71,6 +87,8 @@ def stackelberg_nash_equilibrium(leader_payoffs, follower_payoffs):
         leader_probabilities, follower_strategy = -1, -1 # no equilibria found
 
     return np.array(follower_strategy)
+
+
 
 def save_parameters(parameters_dict:dict, algorithm:str):
     # save parameters in json file

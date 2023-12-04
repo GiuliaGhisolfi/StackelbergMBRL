@@ -1,8 +1,8 @@
-from src.algorithms.PAL import PAL
+from src.algorithms.MAL import MAL
 
 def main(learning_rate, n_environments, max_iterations_per_environment, n_episodes_per_iteration, max_epochs_per_episode, 
     maze_width, maze_height, alpha, gamma, epsilon, temperature):
-    pal = PAL(
+    pal = MAL(
         learning_rate=learning_rate, 
         n_environments=n_environments,
         max_iterations_per_environment=max_iterations_per_environment,
@@ -12,8 +12,7 @@ def main(learning_rate, n_environments, max_iterations_per_environment, n_episod
         maze_height=maze_height, 
         alpha = alpha,
         gamma=gamma,
-        epsilon=epsilon,
-        temperature=temperature
+        epsilon=epsilon
         )
     
     pal.train()
