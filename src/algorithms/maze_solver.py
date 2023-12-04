@@ -18,7 +18,7 @@ WALLS_MAP = {
     3: np.array([0, 3, 1, 2])  # right action: up, right, down, left
 }
 
-class MazeSolverAlgorithm():
+class MazeSolver():
     
     def __init__(self, algorithm, learning_rate, n_environments, max_iterations_per_environment, n_episodes_per_iteration, 
         max_epochs_per_episode, maze_width, maze_height, alpha, gamma, epsilon):

@@ -1,11 +1,11 @@
 import numpy as np
-from src.algorithms.maze_solver_algorithm import MazeSolverAlgorithm
+from src.algorithms.maze_solver import MazeSolver
 from src.algorithms.utils import save_metrics, save_policy, check_stackelberg_nash_equilibrium_MAL
 
 N_ACTIONS = 4
 ACTION_LIST = [0, 1, 2, 3] # [up, down, left, right]
 
-class MAL(MazeSolverAlgorithm):
+class MAL(MazeSolver):
     # MAL: Model As Leader Algorithm
 
     def __init__(self, learning_rate, n_environments, max_iterations_per_environment, n_episodes_per_iteration, 

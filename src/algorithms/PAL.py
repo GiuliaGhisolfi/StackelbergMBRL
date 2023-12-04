@@ -1,5 +1,5 @@
 import numpy as np
-from src.algorithms.maze_solver_algorithm import MazeSolverAlgorithm
+from src.algorithms.maze_solver import MazeSolver
 from src.algorithms.utils import softmax_gradient, softmax, check_stackelberg_nash_equilibrium_PAL, \
     compute_model_loss, compute_actor_critic_objective, save_metrics, save_policy
 
@@ -18,7 +18,7 @@ WALLS_MAP = {
     3: np.array([0, 3, 1, 2])  # right action: up, right, down, left
 }
 
-class PAL(MazeSolverAlgorithm):
+class PAL(MazeSolver):
     # PAL: Policy As Leader Algorithm
 
     def __init__(self, learning_rate, n_environments, max_iterations_per_environment, n_episodes_per_iteration,
