@@ -1,7 +1,22 @@
 import numpy as np
 from src.algorithms.maze_solver_algorithm import MazeSolverAlgorithm
-from src.algorithms.utils import softmax_gradient, softmax, \
+from src.algorithms.utils import softmax_gradient, softmax, check_stackelberg_nash_equilibrium, \
     compute_model_loss, compute_actor_critic_objective, save_metrics, save_policy
+
+N_ACTIONS = 4
+ACTION_LIST = [0, 1, 2, 3] # [up, down, left, right]
+ACTIONS_MAP = {
+    0: [1, 3, 0, 2], 
+    1: [3, 1, 2, 0], 
+    2: [2, 0, 1, 3], 
+    3: [0, 2, 3, 1]
+    } # actions map from agent's pov
+WALLS_MAP = {
+    0: np.array([2, 0, 3, 1]), # up action:    right, down, left, up
+    1: np.array([3, 1, 2, 0]), # down action:  left, up, right, down
+    2: np.array([1, 2, 0, 3]), # left action:  down, left, up, right
+    3: np.array([0, 3, 1, 2])  # right action: up, right, down, left
+}
 
 class PAL(MazeSolverAlgorithm):
     # PAL: Policy As Leader Algorithm
@@ -41,17 +56,26 @@ class PAL(MazeSolverAlgorithm):
         nash_equilibrium_found = False
         for i in range(self.max_iterations_per_environment):
             print(f'\nIteration {i+1}/{self.max_iterations_per_environment} for environment {environment_number}')
-            
+            data_buffer = [] # list of episodes, each episode is a list of tuples (state, action, reward, next_state)
+
             # collect data executing policy in the environment
-            data_buffer = [] # list of episodes, episode: list of tuples (state, action, reward, next_state)
             for _ in range(self.n_episodes_per_iteration):
                 episode = self.executing_policy()
                 data_buffer.append(episode)
                 self.reset_at_initial_state() # reset environment and agent state
             print(f'Collected {len(data_buffer)} episodes')
             
-            # build policy-specific model
+            # compute parameters to optimize model and improve policy
+            p = np.array(self.model_agent.transition_distribuition) # transition probability matrix
+            q_optimal, states_space_model, optimal_reward_function, optimal_next_state_function, \
+                optimal_value_function, policy, states_space_policy = self.optimize_model_and_improve_policy(data_buffer, p)
             
+            # build policy-specific model
+            self.model_agent.transition_distribuition = q_optimal
+            self.model_agent.states_space = states_space_model
+            self.model_agent.next_state_function = optimal_next_state_function
+            self.model_agent.reward_function = optimal_reward_function
+            self.model_agent.values_function = optimal_value_function
             print(f'Model optimized: kl divergence = {self.kl_divergence[self.optimal_model]}')
             
             # improve policy
@@ -60,7 +84,8 @@ class PAL(MazeSolverAlgorithm):
             print(f'Policy improved: cost function = {self.cost_function[self.optimal_model]}')
 
             # stopping criteria: stop in nash equilibrium
-            if self.check_stackelberg_nash_equilibrium():
+            if check_stackelberg_nash_equilibrium(leader_payoffs=self.kl_divergence,
+                follower_payoffs=self.cost_function, target_value=self.best_model):
                 nash_equilibrium_found = True
                 print(f'\nStackelberg nash equilibrium reached after {i+1} iterations \n')
                 metrics_dict = {
@@ -72,7 +97,7 @@ class PAL(MazeSolverAlgorithm):
                     'best_model': self.optimal_model,
                     'nash_equilibrium_found': True,
                     }
-                save_metrics(metrics_dict, model_values_function=self.model_agent.quality_function, 
+                save_metrics(metrics_dict, model_values_function=self.model_agent.values_function, 
                     environment_number=environment_number, iteration_number=i+1, algorithm='PAL')
                 break
             
@@ -85,25 +110,13 @@ class PAL(MazeSolverAlgorithm):
                 'best_model': self.optimal_model,
                 'nash_equilibrium_found': False,
                 }
-            save_metrics(metrics_dict, model_values_function=self.model_agent.quality_function, 
+            save_metrics(metrics_dict, model_values_function=self.model_agent.values_function, 
                     environment_number=environment_number, iteration_number=i+1, algorithm='PAL')
 
         if not nash_equilibrium_found:
             print(f'\nStackelberg nash equilibrium not reached after {self.max_iterations_per_environment} iterations \n')
-
-
-
-
-
-
-
-
-
-
-
-
-
-    def __optimize_model_and_improve_policy(self, data_buffer, p):
+        
+    def optimize_model_and_improve_policy(self, data_buffer, p):
         """
         Build optimal model from experience using episode saved in data_buffer: 
         optimal model is the one that minimize the loss between current model and
@@ -118,7 +131,7 @@ class PAL(MazeSolverAlgorithm):
         self.kl_divergence = [] # list of kl divergence between model and data
         self.optimal_model = -1 # optimal model index in data_buffer, to check if I'm in nash equilibrium
 
-        q_optimal = np.empty((0, len(ACTION_LIST))) # init data transition probability as an empty array
+        q_optimal = np.empty((0, N_ACTIONS)) # init data transition probability as an empty array
         optimal_states_space_model = dict() # init optimal states space
         optimal_value_function = dict() # init optimal value function
 
@@ -132,7 +145,7 @@ class PAL(MazeSolverAlgorithm):
         for i, episode in enumerate(data_buffer):
             # compute model parameters for model optimization
             q, temp_states_space_model, temp_reward_function, temp_next_state_function, temp_value_function = \
-                self.__compute_transition_probability_from_episode(episode, p)
+                self.compute_transition_probability_from_episode(episode, p)
 
             local_loss = compute_model_loss(
                 transition_probability_model=p,
@@ -149,16 +162,16 @@ class PAL(MazeSolverAlgorithm):
             self.kl_divergence.append(local_loss) # in [0, +inf]
 
             # compute policy parameters for policy improvement
-            if len(self.model_agent.quality_function) > 1:
-                model_values_function = np.array(list(self.model_agent.quality_function.values()))
+            if len(self.model_agent.values_function) > 1:
+                model_values_function = np.array(list(self.model_agent.values_function.values()))
             else: # if only one state in the episode
-                model_values_function = np.array(list(self.model_agent.quality_function.values())).reshape(1, -1)
+                model_values_function = np.array(list(self.model_agent.values_function.values())).reshape(1, -1)
             
             advantages_model = np.array(list(temp_value_function.values())) - \
                 np.concatenate((list(model_values_function), 
-                np.zeros((len(temp_value_function) - len(self.model_agent.quality_function), len(ACTION_LIST)) )))
+                np.zeros((len(temp_value_function) - len(self.model_agent.values_function), N_ACTIONS) )))
             
-            temp_policy, temp_states_space_policy, advantages = self.__improve_policy_from_episode(episode,
+            temp_policy, temp_states_space_policy, advantages = self.improve_policy_from_episode(episode,
                 advantages_model=advantages_model, states_space_model=temp_states_space_model)
             
             local_cost_function = compute_actor_critic_objective(temp_policy, advantages)
@@ -173,7 +186,7 @@ class PAL(MazeSolverAlgorithm):
             optimal_value_function, optimal_policy, states_space_policy)
     
     ###### model optimization ######
-    def __compute_transition_probability_from_episode(self, episode, p):
+    def compute_transition_probability_from_episode(self, episode, p):
         """
         Compute transition probability from episode
 
@@ -188,20 +201,20 @@ class PAL(MazeSolverAlgorithm):
         temp_states_space = self.model_agent.states_space.copy()
         temp_next_state_function = self.model_agent.next_state_function.copy()
         temp_reward_function = self.model_agent.reward_function.copy()
-        temp_value_function = self.model_agent.quality_function.copy()
+        temp_value_function = self.model_agent.values_function.copy()
 
         # add new visited state to states space
         for state, action, reward, next_state in episode:
             if state not in temp_states_space.keys():
                 temp_states_space[state] = states_model_space_dim 
-                temp_value_function[states_model_space_dim] = np.zeros(len(ACTION_LIST)) # init value function
+                temp_value_function[states_model_space_dim] = np.zeros(N_ACTIONS) # init value function
                 states_model_space_dim += 1
 
         # initialize transition probability matrix 
-        q = np.zeros((states_model_space_dim, len(ACTION_LIST)))
+        q = np.zeros((states_model_space_dim, N_ACTIONS))
         q[:p.shape[0], :] = p
         q_weights = q.copy() # init transition probability weights
-        mask = np.zeros((states_model_space_dim, len(ACTION_LIST))) # bool: possible actions from each state
+        mask = np.zeros((states_model_space_dim, N_ACTIONS)) # bool: possible actions from each state
         
         # update transition probability weights using actor-critic with TD(0) learning
         for state, action, reward, next_state in episode:
@@ -239,15 +252,15 @@ class PAL(MazeSolverAlgorithm):
         return q, temp_states_space, temp_reward_function, temp_next_state_function, temp_value_function
     
     ###### policy improvement ######
-    def __improve_policy_from_episode(self, episode, advantages_model, states_space_model):
+    def improve_policy_from_episode(self, episode, advantages_model, states_space_model):
         temp_policy = self.policy_agent.policy.copy()
         temp_states_space_policy = self.policy_agent.states_space.copy()
         previous_action = self.policy_agent.fittizial_first_action
-        advantages_policy = np.zeros((len(temp_states_space_policy), len(ACTION_LIST))) # cumulative temporal difference error
+        advantages_policy = np.zeros((len(temp_states_space_policy), N_ACTIONS)) # cumulative temporal difference error
             
         for state, action, reward, next_state in episode:
             # transition probability matrix of the environment
-            temp_policy, temp_states_space_policy, advantages_policy = self.__update_policy(state, 
+            temp_policy, temp_states_space_policy, advantages_policy = self.update_policy(state, 
                 temp_policy, temp_states_space_policy, action, previous_action, 
                 advantages_model, states_space_model, advantages_policy)
             
@@ -266,7 +279,7 @@ class PAL(MazeSolverAlgorithm):
 
         return temp_policy, temp_states_space_policy, advantages_policy
     
-    def __update_policy(self, state, policy:list, states_space_policy:dict, action:int, previous_action:int,
+    def update_policy(self, state, policy:list, states_space_policy:dict, action:int, previous_action:int,
         advantages_model:list, states_space_model:dict, advantages_policy:np.ndarray):
 
         state_not_walls = self.policy_agent.compute_walls_from_transition_matrix(
@@ -289,7 +302,7 @@ class PAL(MazeSolverAlgorithm):
             policy.append(policy)
             
             # update advantages vector
-            advantages_policy = np.concatenate((advantages_policy, np.zeros(len(ACTION_LIST))))
+            advantages_policy = np.concatenate((advantages_policy, np.zeros(N_ACTIONS)))
 
         # policy improvement using actor-critic
         action_agent_pov = ACTIONS_MAP[previous_action][action]
