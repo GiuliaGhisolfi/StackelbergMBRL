@@ -1,5 +1,6 @@
 import numpy as np
 
+N_ACTIONS = 4
 ACTIONS_LIST = [0, 1, 2, 3] # [up, down, left, right]
 WALLS_MAP = {
     0: np.array([2, 0, 3, 1]), # up action:    right, down, left, up
@@ -13,10 +14,13 @@ class PolicyAgent():
     compute_action_policy:str='epsilon_greedy', epsilon:float=0.1):
         self.policy = None # policy[state number] = probability distribution over actions
         self.states_space = dict() # {state number: walls[-,-,-,-]}
+
+        self.quality_function = dict() # Q := {state number: actions values (np.darray)}
+        self.quality_function[0] = np.zeros(N_ACTIONS) 
+
         self.gamma = gamma # discount factor
         self.compute_action_policy = compute_action_policy # epsilon_greedy or uniform_initialization
         self.epsilon = epsilon
-        self.quality_function = dict() # Q := {state number: actions values (np.darray)}
 
         self.compute_fitizial_first_action(transition_matrix_initial_state)
     

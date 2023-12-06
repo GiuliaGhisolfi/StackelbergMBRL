@@ -34,14 +34,14 @@ def main(algorithm, learning_rate, n_environments, max_iterations_per_environmen
 
 
 if __name__ == '__main__':
-    algorithm = 'PAL' # 'PAL' or 'MAL'
+    algorithm = 'MAL' # 'PAL' or 'MAL'
 
     # maze parameters
     maze_width = 101
     maze_height = 51
 
     # agent parameters
-    gamma = 0.9 # discount factor to compute expected cumulative reward
+    gamma = 0.995 # discount factor to compute expected cumulative reward
     alpha = 0.01 # learning rate for policy improvment
 
     # training parameters

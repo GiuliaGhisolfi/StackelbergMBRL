@@ -32,7 +32,8 @@ class MAL(MazeSolver):
                 # reset and initialize new environment and model agent
                 self.env.reset_environment()
                 self.model_agent.reset_agent(
-                    initial_state_coord=self.env.initial_state_coord)
+                    initial_state_coord=self.env.initial_state_coord,
+                    transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :])
 
                 # reset policy agent at initial state
                 self.policy_agent.reset_at_initial_state(
@@ -74,6 +75,8 @@ class MAL(MazeSolver):
 
                 model_loss_list.append(-local_model_loss)
             self.model_agent.quality_function = optimal_quality_function
+            self.policy_agent.quality_function = self.compute_quality_function_policy(
+                quality_function=optimal_quality_function)
             print('Model optimized')
 
             # stopping criterion
@@ -127,7 +130,9 @@ class MAL(MazeSolver):
             quality_function=quality_function)
 
         # update policy
-        policy += self.lr * policy_gradient
+        mask = np.where(policy > 0, 1, 0)
+        policy += self.lr * policy_gradient * mask
+        policy /= np.sum(policy, axis=1).reshape(-1,1) # normalize policy
 
         return policy
     
@@ -142,20 +147,24 @@ class MAL(MazeSolver):
     def compute_advantege_function(self, quality_function, policy):
         # compute advantage function from quality function
         quality_function_policy = self.compute_quality_function_policy(quality_function)
-        value_function_approx = np.sum(np.concatenate((quality_function_policy, np.zeros((
-            len(self.policy_agent.states_space)-len(quality_function_policy), N_ACTIONS))), axis=0)
-            * policy, axis=1).reshape(-1,1)
-        return quality_function_policy - np.ones(quality_function_policy.shape) * value_function_approx
+        value_function_approx = np.sum((np.array(list(quality_function_policy.values())
+            ) * policy), axis=1).reshape(-1,1)
+        return np.array(list(quality_function_policy.values())) - np.ones((len(quality_function_policy), N_ACTIONS)
+            ) * value_function_approx
     
     def compute_quality_function_policy(self, quality_function):
         # map function := {((x,y), previous_action): state_policy}
         # Q (x,y): actions values (np.darray)
-        quality_function_policy = np.zeros((len(self.policy_agent.states_space), N_ACTIONS))
+        quality_function_policy = self.policy_agent.quality_function.copy()
+        for i in range(len(self.policy_agent.states_space)-len(quality_function_policy)+1):
+            quality_function_policy[i] = np.zeros(N_ACTIONS) 
+        
+        # update quality function policy
         for state, actions_values in quality_function.items():
             for previous_action in ACTION_LIST:
                 try:
                     quality_function_policy[self.map_state_model_to_policy[(state,
-                        previous_action)]] = actions_values
+                        previous_action)]] += actions_values
                 except:
                     pass
         
