@@ -148,7 +148,7 @@ class MAL(MazeSolver):
             if np.sum(not_walls) > 1:
                 policy[state]= not_walls * self.epsilon / (np.sum(not_walls) - 1)
                 max_value = max(quality_function_policy[state]*not_walls)
-                idx = np.where(quality_function_policy[state] == max_value)[0]
+                idx = np.where(quality_function_policy[state] == max_value)[0] #FIXME
                 policy[state][idx[0]] = 1 - self.epsilon # epsilon greedy
             else:
                 policy[state] = not_walls.astype(float)
