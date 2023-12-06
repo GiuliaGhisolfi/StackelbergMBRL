@@ -54,7 +54,6 @@ class PolicyAgent():
         # add state to states space if it isn't already in
         if len([key for key, value in self.states_space.items() if np.equal(value, not_walls).all()]) < 1:
             self.states_space[len(self.states_space)] = not_walls
-
             # update policy
             if np.sum(not_walls) > 1:
                 policy = not_walls * self.epsilon / (np.sum(not_walls) - 1)

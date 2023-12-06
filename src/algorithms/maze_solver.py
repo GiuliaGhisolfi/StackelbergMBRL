@@ -106,7 +106,7 @@ class MazeSolver():
             
             # check if terminal state is reached
             if current_state == self.env.terminal_state:
-                print('Terminal state reached')
+                print(f'Terminal state reached after {len(episode)} steps')
                 break
             
         return episode
