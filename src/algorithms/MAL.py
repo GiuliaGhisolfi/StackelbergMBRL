@@ -130,6 +130,8 @@ class MAL(MazeSolver):
 
         # update policy
         mask = np.where(policy > 0, 1, 0)
+        if (policy_gradient < 0).any():
+            policy_gradient += np.min(policy_gradient)
         policy += self.lr * policy_gradient * mask
         policy /= np.sum(policy, axis=1).reshape(-1,1) # normalize policy
 
