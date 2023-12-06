@@ -58,57 +58,6 @@ def compute_actor_critic_objective(policy_probs, advantages):
 
     return objective # cost function value
 
-###### NASH EQUILIBRIUM FUNCTIONS ######
-def check_stackelberg_nash_equilibrium_MAL(leader_payoffs, follower_payoffs, target_value):
-    """
-    Check if the policy is at Stackelberg-Nash equilibrium, 
-    knowing all possible transition distribuition from the model and the policy
-
-    Returns:
-        (bool): True if the policy is at nash equilibrium, False otherwise
-    """
-    # initialize the game
-    game = nash.Game([leader_payoffs], [follower_payoffs])
-
-    # Find the Stackelberg equilibrium using the support enumeration algorithm
-    stackelberg_equilibria = list(game.support_enumeration())
-
-    # Extract the probabilities of the leader and the strategy of the follower
-    if len(stackelberg_equilibria) > 0:
-        leader_probabilities, follower_strategy = stackelberg_equilibria[0]
-    else:
-        leader_probabilities, follower_strategy = -1, -1 # no equilibria found
-
-    eq_follower = np.where(follower_strategy != 0)
-
-    return target_value in eq_follower
-
-def check_stackelberg_nash_equilibrium_PAL(leader_payoffs, follower_payoffs, 
-    leader_target_value, follower_target_value):
-    """
-    Check if the policy is at Stackelberg-Nash equilibrium, 
-    knowing all possible transition distribuition from the model and the policy
-
-    Returns:
-        (bool): True if the policy is at nash equilibrium, False otherwise
-    """
-    # initialize the game
-    game = nash.Game(np.array(leader_payoffs).reshape(-1,1), np.array(follower_payoffs).reshape(-1,1))
-
-    # Find the Stackelberg equilibrium using the support enumeration algorithm
-    stackelberg_equilibria = list(game.support_enumeration())
-
-    # Extract the probabilities of the leader and the strategy of the follower
-    if len(stackelberg_equilibria) > 0:
-        leader_probabilities, follower_strategy = stackelberg_equilibria[0]
-    else:
-        leader_probabilities, follower_strategy = -1, -1 # no equilibria found
-
-    eq_follower = np.where(follower_strategy != 0)
-    eq_leader = np.where(leader_probabilities != 0)
-
-    return leader_target_value in eq_leader and follower_target_value in eq_follower
-
 ###### STACKELBERG NASH EQUILIBRIUM FUNCTIONS ######
 def check_stackelberg_nash_equilibrium(leader_payoffs, follower_payoffs, equilibrium_find):
     """

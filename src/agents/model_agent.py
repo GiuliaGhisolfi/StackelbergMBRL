@@ -30,8 +30,8 @@ class ModelAgent(Agent):
         self.__update_states_space(state_coord=next_state_coord)
         next_state = self.states_space[next_state_coord]
 
-        self.__update_next_state_function(state=self.agent_state, action=action, next_state=next_state)
-        self.__update_reward_function(state=self.agent_state, action=action, reward=reward)
+        self.update_next_state_function(state=self.agent_state, action=action, next_state=next_state)
+        self.update_reward_function(state=self.agent_state, action=action, reward=reward)
 
         self.agent_state = next_state
     
@@ -50,11 +50,11 @@ class ModelAgent(Agent):
             self.transition_distribuition[self.agent_state] /= np.sum(
                 self.transition_distribuition[self.agent_state])
 
-    def __update_next_state_function(self, state, action, next_state):
+    def update_next_state_function(self, state, action, next_state):
         # S, A -> S': deterministica
         self.next_state_function[(state, action)] = next_state
 
-    def __update_reward_function(self, state, action, reward):
+    def update_reward_function(self, state, action, reward):
         # S, A -> R
         self.reward_function[(state, action)] = reward
     
@@ -63,15 +63,3 @@ class ModelAgent(Agent):
         if state_coord not in self.states_space.keys():
             self.states_space[state_coord] = self.agent_state
             self.values_function[self.agent_state] = np.zeros(N_ACTIONS)
-    
-    def __compute_reward_function(self, episode):
-        """
-        Compute cumulative reward from the episode
-        episode = [(state, action, reward, next_state), ...]
-        """
-        T = len(episode) # number of steps to reach terminal state from current state
-        if T == 1:
-            return episode[0][2] # reward of the final step
-        else:
-            return sum([self.gamma**t * self.__compute_reward_function(episode[1:]) for t in range(T)]) # recursive call
-    
