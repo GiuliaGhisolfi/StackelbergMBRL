@@ -1,4 +1,5 @@
 import numpy as np
+import copy
 from src.algorithms.maze_solver import MazeSolver
 from src.algorithms.utils import softmax_gradient, softmax, check_stackelberg_nash_equilibrium, \
     compute_model_loss, compute_actor_critic_objective, save_metrics, save_policy
@@ -200,10 +201,10 @@ class PAL(MazeSolver):
         """
         states_model_space_dim = len(self.model_agent.states_space)
 
-        temp_states_space = self.model_agent.states_space.copy()
-        temp_next_state_function = self.model_agent.next_state_function.copy()
-        temp_reward_function = self.model_agent.reward_function.copy()
-        temp_value_function = self.model_agent.values_function.copy()
+        temp_states_space = copy.deepcopy(self.model_agent.states_space)
+        temp_next_state_function = copy.deepcopy(self.model_agent.next_state_function)
+        temp_reward_function = copy.deepcopy(self.model_agent.reward_function)
+        temp_value_function = copy.deepcopy(self.model_agent.values_function)
 
         # add new visited state to states space
         for state, action, reward, next_state in episode:
@@ -215,7 +216,7 @@ class PAL(MazeSolver):
         # initialize transition probability matrix 
         q = np.zeros((states_model_space_dim, N_ACTIONS))
         q[:p.shape[0], :] = p
-        q_weights = q.copy() # init transition probability weights
+        q_weights = copy.deepcopy(q) # init transition probability weights
         mask = np.zeros((states_model_space_dim, N_ACTIONS)) # bool: possible actions from each state
         
         # update transition probability weights using actor-critic with TD(0) learning
@@ -255,8 +256,8 @@ class PAL(MazeSolver):
     
     ###### policy improvement ######
     def improve_policy_from_episode(self, episode, advantages_model, states_space_model):
-        temp_policy = self.policy_agent.policy.copy()
-        temp_states_space_policy = self.policy_agent.states_space.copy()
+        temp_policy = copy.deepcopy(self.policy_agent.policy)
+        temp_states_space_policy = copy.deepcopy(self.policy_agent.states_space)
         previous_action = self.policy_agent.fittizial_first_action
         advantages_policy = np.zeros((len(temp_states_space_policy), N_ACTIONS)) # cumulative temporal difference error
             

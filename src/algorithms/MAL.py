@@ -1,4 +1,5 @@
 import numpy as np
+import copy
 import random
 from src.algorithms.maze_solver import MazeSolver
 from src.algorithms.utils import save_metrics, save_policy, check_stackelberg_nash_equilibrium
@@ -74,16 +75,22 @@ class MAL(MazeSolver):
             optimal_model = -1
 
             for j, episode in enumerate(data_buffer):
-                quality_function = self.improve_model(episode=episode)
+                quality_function, next_state_function, reward_function = self.improve_model(episode=episode)
                 local_model_loss = self.compute_model_loss(quality_function=quality_function)
 
                 if local_model_loss < model_loss:
                     model_loss = local_model_loss
                     optimal_quality_function = quality_function
+                    optimal_next_state_function = next_state_function
+                    optimal_reward_function = reward_function
                     optimal_model = j
 
                 model_loss_list.append(-local_model_loss)
+
             self.model_agent.quality_function = optimal_quality_function
+            self.model_agent.next_state_function = optimal_next_state_function
+            self.model_agent.reward_function = optimal_reward_function
+
             self.policy_agent.quality_function = self.compute_quality_function_policy(
                 quality_function=optimal_quality_function)
             print('Model optimized')
@@ -139,23 +146,27 @@ class MAL(MazeSolver):
             policy (np.ndarray): policy to execute in the environment
         """
         # compute policy from model's quality function
-        policy = self.policy_agent.policy.copy()
-        quality_function = self.model_agent.quality_function.copy()
+        policy = copy.deepcopy(self.policy_agent.policy)
+        quality_function = copy.deepcopy(self.model_agent.quality_function)
 
         # update policy maximaizing model reward
         quality_function_policy = self.compute_quality_function_policy(quality_function)
         for state, not_walls in self.policy_agent.states_space.items():
             if np.sum(not_walls) > 1:
-                policy[state]= not_walls * self.epsilon / (np.sum(not_walls) - 1)
-                max_value = max(quality_function_policy[state]*not_walls)
-                idx = np.where(quality_function_policy[state] == max_value)[0] #FIXME
-                policy[state][idx[0]] = 1 - self.epsilon # epsilon greedy
+                value = quality_function_policy[state]*not_walls
+                value = [-np.inf if abs(value[i]) == 0 else value[i] for i in range(4)]
+                idx = np.where(value == max(value))[0]
+                if len(idx) > 0:
+                    policy[state] = not_walls * self.epsilon / (np.sum(not_walls) - 1)
+                    policy[state][idx[0]] = 1 - self.epsilon # epsilon greedy
+                else:
+                    policy[state] = not_walls * self.epsilon / (np.sum(not_walls))
             else:
                 policy[state] = not_walls.astype(float)
   
         # execute policy in the model to collect reward
         rewards = []
-        state = random.choice(list(self.model_agent.states_space)) # random initial state
+        state = random.choice(list(self.model_agent.quality_function)) # random initial state
 
         for _ in range(int(self.max_epochs_per_episode/10)):
             # state, action, reward, next state
@@ -163,8 +174,10 @@ class MAL(MazeSolver):
                 self.model_agent.quality_function[state] != 0)[0])
             rewards.append(self.model_agent.reward_function[(state, action)])
             state = self.model_agent.next_state_function[(state, action)] # next state
-            if rewards[-1] == 0:
+            if rewards[-1] == 0 or len(np.where(self.model_agent.quality_function[state] != 0)[0]) == 0:
                 break # terminal state reached
+        
+        policy = (1-self.lr) * policy + self.lr * policy
         
         # compute cost function
         value_function_last_state = np.sum(quality_function_policy[
@@ -184,9 +197,11 @@ class MAL(MazeSolver):
     def compute_quality_function_policy(self, quality_function):
         # map function := {((x,y), previous_action): state_policy}
         # Q (x,y): actions values (np.darray)
-        quality_function_policy = self.policy_agent.quality_function.copy()
-        for i in range(len(self.policy_agent.states_space)-len(quality_function_policy)+1):
-            quality_function_policy[i] = np.zeros(N_ACTIONS) 
+        quality_function_policy = copy.deepcopy(self.policy_agent.quality_function)
+
+        delta_len = len(quality_function_policy)
+        for i in range(len(self.policy_agent.states_space)-delta_len):
+            quality_function_policy[delta_len+i] = np.zeros(N_ACTIONS) 
         
         # update quality function policy
         for state, actions_values in quality_function.items():
@@ -211,14 +226,16 @@ class MAL(MazeSolver):
             quality_function (dict): updated model agents quality function
         """
         # create a dict 
-        quality_function = self.model_agent.quality_function.copy()
+        quality_function = copy.deepcopy(self.model_agent.quality_function)
+        next_state_function = copy.deepcopy(self.model_agent.next_state_function)
+        reward_function = copy.deepcopy(self.model_agent.reward_function)
         previous_action = self.policy_agent.fittizial_first_action
         
         for state, action, reward, next_state in episode:
             # update states space and model's parameters
             self.update_states_space(state_coord=state, previous_action=previous_action)
-            self.model_agent.update_next_state_function(state, action, next_state)
-            self.model_agent.update_reward_function(state, action, reward)
+            next_state_function[(state, action)] = next_state
+            reward_function[(state, action)] = reward
 
             if next_state not in quality_function.keys():
                 # initialize quality function at next state
@@ -227,10 +244,15 @@ class MAL(MazeSolver):
             # Q-Learning update
             quality_function[state][action] += self.alpha * (reward + 
                 self.gamma * np.max(quality_function[next_state]) - quality_function[state][action])
-            
+                        
             previous_action = action
+
+            c = len(np.nonzero(np.array(list(quality_function.values()))))
+            d = len(reward_function)
+            e = len(next_state_function)
+        #self.update_states_space(state_coord=next_state, previous_action=previous_action) # last state
         
-        return quality_function
+        return quality_function, next_state_function, reward_function
     
     def update_states_space(self, state_coord, previous_action):
         """
