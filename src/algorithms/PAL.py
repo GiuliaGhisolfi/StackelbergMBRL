@@ -237,6 +237,7 @@ class PAL(MazeSolver):
 
             temp_value_function[temp_states_space[state]][action] += self.alpha * td_error
 
+            #FIXME: compute transition prob using epsilon using greedy with temp value function as object
             # update transition probability matrix
             gradient = softmax_gradient(policy=q_weights[temp_states_space[state], :], action=action)
             q_weights[temp_states_space[state], :] += temp_value_function[temp_states_space[state]] * gradient

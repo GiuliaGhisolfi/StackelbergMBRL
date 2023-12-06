@@ -48,7 +48,7 @@ if __name__ == '__main__':
     n_environments = 30 # number of different environments to train on
     max_iterations_per_environment = 10
     n_episodes_per_iteration = 3 # number of episodes to run for each epoch
-    max_epochs_per_episode = 6000
+    max_epochs_per_episode = 60#00
     learning_rate = 0.1
     epsilon = 0.1 # epsilon for epsilon-greedy policy
 

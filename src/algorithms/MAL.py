@@ -156,8 +156,10 @@ class MAL(MazeSolver):
         return np.nan_to_num(np.log(policy+1e-10) * self.compute_advantege_function(
             quality_function, policy)) # avoid log(0)
 
-    def compute_policy_cost_function(self, policy, quality_function):
-        return np.sum(policy * self.compute_advantege_function(quality_function, policy))
+    def compute_policy_cost_function(self, policy, quality_function, action):
+        initialia_state_number = self.policy_agent.get_state_number(self.fi)
+        #return np.sum(policy * self.compute_advantege_function(quality_function, policy))
+        return np.sum(policy[initialia_state_number])
     
     def compute_advantege_function(self, quality_function, policy):
         # compute advantage function from quality function
@@ -238,7 +240,7 @@ class MAL(MazeSolver):
     
     def compute_model_loss(self, quality_function):
         def mse(y_true, y_pred):
-            return np.mean(np.power(y_true - y_pred, 2)) #FIXME: Pperands could not be broadcast together with shapes (593,4) (590,4) 
+            return np.mean(np.power(y_true - y_pred, 2)) #FIXME: operands could not be broadcast together with shapes (593,4) (590,4) 
         
         return mse(np.concatenate((np.array(list(self.model_agent.quality_function.values())),                
             np.zeros((len(quality_function)-len(self.model_agent.quality_function), N_ACTIONS))), axis=0),
