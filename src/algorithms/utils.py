@@ -3,9 +3,10 @@ import numpy as np
 import nashpy as nash
 from keras.losses import KLDivergence
 
-def softmax_gradient(policy, action, temperature):
+###### GENERAL FUNCTIONS FOR PAL ######
+def softmax_gradient(policy, action):
     # compute softmax probabilities
-    probabilities = softmax(policy / temperature)
+    probabilities = softmax(policy)
 
     # compute softmax gradient
     gradient = np.zeros_like(probabilities)
@@ -57,7 +58,15 @@ def compute_actor_critic_objective(policy_probs, advantages):
 
     return objective # cost function value
 
-def stackelberg_nash_equilibrium(leader_payoffs, follower_payoffs):
+###### NASH EQUILIBRIUM FUNCTIONS ######
+def check_stackelberg_nash_equilibrium_MAL(leader_payoffs, follower_payoffs, target_value):
+    """
+    Check if the policy is at Stackelberg-Nash equilibrium, 
+    knowing all possible transition distribuition from the model and the policy
+
+    Returns:
+        (bool): True if the policy is at nash equilibrium, False otherwise
+    """
     # initialize the game
     game = nash.Game([leader_payoffs], [follower_payoffs])
 
@@ -70,8 +79,71 @@ def stackelberg_nash_equilibrium(leader_payoffs, follower_payoffs):
     else:
         leader_probabilities, follower_strategy = -1, -1 # no equilibria found
 
-    return np.array(follower_strategy)
+    eq_follower = np.where(follower_strategy != 0)
 
+    return target_value in eq_follower
+
+def check_stackelberg_nash_equilibrium_PAL(leader_payoffs, follower_payoffs, 
+    leader_target_value, follower_target_value):
+    """
+    Check if the policy is at Stackelberg-Nash equilibrium, 
+    knowing all possible transition distribuition from the model and the policy
+
+    Returns:
+        (bool): True if the policy is at nash equilibrium, False otherwise
+    """
+    # initialize the game
+    game = nash.Game(np.array(leader_payoffs).reshape(-1,1), np.array(follower_payoffs).reshape(-1,1))
+
+    # Find the Stackelberg equilibrium using the support enumeration algorithm
+    stackelberg_equilibria = list(game.support_enumeration())
+
+    # Extract the probabilities of the leader and the strategy of the follower
+    if len(stackelberg_equilibria) > 0:
+        leader_probabilities, follower_strategy = stackelberg_equilibria[0]
+    else:
+        leader_probabilities, follower_strategy = -1, -1 # no equilibria found
+
+    eq_follower = np.where(follower_strategy != 0)
+    eq_leader = np.where(leader_probabilities != 0)
+
+    return leader_target_value in eq_leader and follower_target_value in eq_follower
+
+###### STACKELBERG NASH EQUILIBRIUM FUNCTIONS ######
+def check_stackelberg_nash_equilibrium(leader_payoffs, follower_payoffs, equilibrium_find):
+    """
+    Check if the policy is at Stackelberg-Nash equilibrium, 
+    knowing all possible transition distributions from the model and the policy
+
+    Returns:
+        bool: True if the policy is at Nash equilibrium, False otherwise
+    """
+    equilibrium_list = []
+    equilibrium_leader_value_list = []
+    equilibrium_follower_value_list = []
+
+    for i, leader_payoff in enumerate(leader_payoffs):
+        follower_payoff_vector = follower_payoffs
+        max_follower_payoff = max(follower_payoff_vector)
+        follower_eq = np.argmax(follower_payoff_vector)
+
+        equilibrium_list.append((i, follower_eq))
+        equilibrium_leader_value_list.append(leader_payoff)
+        equilibrium_follower_value_list.append(max_follower_payoff)
+
+    max_leader_value = max(equilibrium_leader_value_list)
+    max_follower_value = max(equilibrium_follower_value_list)
+
+    # Finding the indices where the maximum values occur
+    equilibrium_indices = [index for index, value in enumerate(equilibrium_leader_value_list) if value == max_leader_value]
+
+    # Check if the follower values at these indices are also the maximum
+    valid_equilibria = [(leader_index, follower_index) for leader_index, follower_index in equilibrium_list if leader_index in equilibrium_indices and equilibrium_follower_value_list[leader_index] == max_follower_value]
+
+    # Check if the provided equilibrium_find matches any valid equilibrium
+    return equilibrium_find in valid_equilibria
+
+###### SAVE AND LOAD FUNCTIONS ######
 def save_parameters(parameters_dict:dict, algorithm:str):
     # save parameters in json file
     with open(f'parameters/{algorithm}_parameters.json', 'w') as parameters_file:

@@ -1,10 +1,9 @@
 import numpy as np
-from src.agents.model_agent import ModelAgent
-from src.agents.policy_agent import PolicyAgent
-from src.environment.environment import Environment
-from src.algorithms.utils import softmax_gradient, softmax, stackelberg_nash_equilibrium, \
-    compute_model_loss, compute_actor_critic_objective, save_metrics, save_policy, save_parameters
+from src.algorithms.maze_solver import MazeSolver
+from src.algorithms.utils import softmax_gradient, softmax, check_stackelberg_nash_equilibrium, \
+    compute_model_loss, compute_actor_critic_objective, save_metrics, save_policy
 
+N_ACTIONS = 4
 ACTION_LIST = [0, 1, 2, 3] # [up, down, left, right]
 ACTIONS_MAP = {
     0: [1, 3, 0, 2], 
@@ -19,65 +18,24 @@ WALLS_MAP = {
     3: np.array([0, 3, 1, 2])  # right action: up, right, down, left
 }
 
-class PAL():
+class PAL(MazeSolver):
     # PAL: Policy As Leader Algorithm
 
-    def __init__(self, learning_rate, n_environments, max_iterations_per_environment, n_episodes_per_iteration, 
-        max_epochs_per_episode, maze_width, maze_height, alpha, gamma, epsilon, temperature):
-
-        self.n_environments = n_environments
-        self.max_iterations_per_environment = max_iterations_per_environment
-        self.n_episodes_per_iteration = n_episodes_per_iteration
-        self.max_epochs_per_episode = max_epochs_per_episode
-        self.lr = learning_rate # learning rate for policy improvement
-        self.alpha = alpha # alpha, learning rate for value function update
-        self.gamma = gamma # discount factor to compute expected cumulative reward
-        self.epsilon = epsilon # epsilon greedy parameter
-        self.temperature = temperature # temperature for softmax gradient
-
-        parameters_dict = {
-            'n_environments': self.n_environments,
-            'max_iterations_per_environment': self.max_iterations_per_environment,
-            'n_episodes_per_iteration': self.n_episodes_per_iteration,
-            'max_epochs_per_episode': self.max_epochs_per_episode,
-            'learning_rate': self.lr,
-            'alpha': self.alpha,
-            'gamma': self.gamma,
-            'epsilon': self.epsilon,
-            'temperature': self.temperature
-            }
-        save_parameters(parameters_dict, algorithm='PAL') # save parameters in json file
-
-        # initalize environment
-        self.env = Environment(
-            maze_width=maze_width,
-            maze_height=maze_height
-            ) #TODO: cambiare render mode per evitare chiamata a pygame
-
-        # initialize model and policy agents
-        self.model_agent = ModelAgent(
-            gamma=gamma,
-            transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :],
-            initial_state_coord=self.env.initial_state_coord
-            )
-        self.policy_agent = PolicyAgent(
-            gamma=gamma,
-            transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :],
-            epsilon=epsilon
-            )
-        print('Agents initialized')
-
-        # transition probability matrix
-        self.p = self.model_agent.transition_distribuition[
-            self.model_agent.agent_state]
+    def __init__(self, learning_rate, n_environments, max_iterations_per_environment, n_episodes_per_iteration,
+        max_epochs_per_episode, maze_width, maze_height, alpha, gamma, epsilon):
     
+        super().__init__(algorithm='PAL', learning_rate=learning_rate, n_environments=n_environments, 
+            max_iterations_per_environment=max_iterations_per_environment, n_episodes_per_iteration=n_episodes_per_iteration, 
+            max_epochs_per_episode=max_epochs_per_episode, maze_width=maze_width, maze_height=maze_height, 
+            alpha=alpha, gamma=gamma, epsilon=epsilon)
+
     def train(self):
         # train loop over n_environments environments
         print('Training started')
         for i in range(self.n_environments):
             print(f'\nTraining on environment {i+1}/{self.n_environments}')
             # train loop for the environment
-            self.__train_loop_for_the_environment(environment_number=i+1)
+            self.train_loop_for_the_environment(environment_number=i+1)
 
             # checkpoint: save policy, policy states space and metrics in json file
             save_policy(policy=self.policy_agent.policy, states_space=self.policy_agent.states_space, 
@@ -90,23 +48,11 @@ class PAL():
                     initial_state_coord=self.env.initial_state_coord, 
                     transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :])
 
-                # reset transition probability matrix p
-                self.p = self.model_agent.transition_distribuition[self.model_agent.agent_state]
-
                 # reset policy agent at initial state
                 self.policy_agent.reset_at_initial_state(
                     transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :])
-    
-    def reset_at_initial_state(self):
-        # reset agent's position in the environment
-        self.env.reset()
-
-        # reset agent state at initial state
-        self.model_agent.agent_state = 0
-        self.policy_agent.reset_at_initial_state(
-            transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :])
  
-    def __train_loop_for_the_environment(self, environment_number):
+    def train_loop_for_the_environment(self, environment_number):
         nash_equilibrium_found = False
         for i in range(self.max_iterations_per_environment):
             print(f'\nIteration {i+1}/{self.max_iterations_per_environment} for environment {environment_number}')
@@ -122,7 +68,7 @@ class PAL():
             # compute parameters to optimize model and improve policy
             p = np.array(self.model_agent.transition_distribuition) # transition probability matrix
             q_optimal, states_space_model, optimal_reward_function, optimal_next_state_function, \
-                optimal_value_function, policy, states_space_policy = self.__optimize_model_and_improve_policy(data_buffer, p)
+                optimal_value_function, policy, states_space_policy = self.optimize_model_and_improve_policy(data_buffer, p)
             
             # build policy-specific model
             self.model_agent.transition_distribuition = q_optimal
@@ -138,7 +84,9 @@ class PAL():
             print(f'Policy improved: cost function = {self.cost_function[self.optimal_model]}')
 
             # stopping criteria: stop in nash equilibrium
-            if self.__check_stackelberg_nash_equilibrium():
+            if check_stackelberg_nash_equilibrium(leader_payoffs=self.kl_divergence,
+                follower_payoffs=self.cost_function, equilibrium_find=(
+                self.optimal_policy_agent,self.optimal_model)):
                 nash_equilibrium_found = True
                 print(f'\nStackelberg nash equilibrium reached after {i+1} iterations \n')
                 metrics_dict = {
@@ -169,45 +117,7 @@ class PAL():
         if not nash_equilibrium_found:
             print(f'\nStackelberg nash equilibrium not reached after {self.max_iterations_per_environment} iterations \n')
         
-    def executing_policy(self):
-        """
-        Execute policy in the environment to collect data
-
-        Args:
-            agent (PolicyAgent)
-            env (Environment)
-
-        Returns:
-            list os steps: [(state, action, reward, next_state), ...]
-        """
-
-        current_state = self.env.state
-        current_state_coord = self.env.coordinates_from_state(self.env.state)
-        action = self.policy_agent.fittizial_first_action
-        episode = [] # init
-
-        for _ in range(self.max_epochs_per_episode):
-            # select action from policy
-            action = self.policy_agent.compute_next_action(action=action, 
-                        transition_matrix=self.env.p[:, current_state, :])
-
-            # compute step in environment
-            next_state, reward, _, _, _ = self.env.step(action) # next_state: numeric
-
-            # save step in episode
-            episode.append((current_state_coord, action, reward, self.env.coordinates_from_state(next_state)))
-
-            # update current state
-            current_state = next_state
-            current_state_coord = self.env.coordinates_from_state(next_state)
-            
-            # check if terminal state is reached
-            if current_state == self.env.terminal_state:
-                break
-            
-        return episode
-
-    def __optimize_model_and_improve_policy(self, data_buffer, p):
+    def optimize_model_and_improve_policy(self, data_buffer, p):
         """
         Build optimal model from experience using episode saved in data_buffer: 
         optimal model is the one that minimize the loss between current model and
@@ -222,7 +132,7 @@ class PAL():
         self.kl_divergence = [] # list of kl divergence between model and data
         self.optimal_model = -1 # optimal model index in data_buffer, to check if I'm in nash equilibrium
 
-        q_optimal = np.empty((0, len(ACTION_LIST))) # init data transition probability as an empty array
+        q_optimal = np.empty((0, N_ACTIONS)) # init data transition probability as an empty array
         optimal_states_space_model = dict() # init optimal states space
         optimal_value_function = dict() # init optimal value function
 
@@ -236,7 +146,7 @@ class PAL():
         for i, episode in enumerate(data_buffer):
             # compute model parameters for model optimization
             q, temp_states_space_model, temp_reward_function, temp_next_state_function, temp_value_function = \
-                self.__compute_transition_probability_from_episode(episode, p)
+                self.compute_transition_probability_from_episode(episode, p)
 
             local_loss = compute_model_loss(
                 transition_probability_model=p,
@@ -260,15 +170,16 @@ class PAL():
             
             advantages_model = np.array(list(temp_value_function.values())) - \
                 np.concatenate((list(model_values_function), 
-                np.zeros((len(temp_value_function) - len(self.model_agent.values_function), len(ACTION_LIST)) )))
+                np.zeros((len(temp_value_function) - len(self.model_agent.values_function), N_ACTIONS) )))
             
-            temp_policy, temp_states_space_policy, advantages = self.__improve_policy_from_episode(episode,
+            temp_policy, temp_states_space_policy, advantages = self.improve_policy_from_episode(episode,
                 advantages_model=advantages_model, states_space_model=temp_states_space_model)
             
             local_cost_function = compute_actor_critic_objective(temp_policy, advantages)
 
             if local_cost_function > cost_function:
                 cost_function = local_cost_function
+                self.optimal_policy_agent = i
                 optimal_policy = temp_policy
                 states_space_policy = temp_states_space_policy
             self.cost_function.append(local_cost_function)
@@ -277,7 +188,7 @@ class PAL():
             optimal_value_function, optimal_policy, states_space_policy)
     
     ###### model optimization ######
-    def __compute_transition_probability_from_episode(self, episode, p):
+    def compute_transition_probability_from_episode(self, episode, p):
         """
         Compute transition probability from episode
 
@@ -298,14 +209,14 @@ class PAL():
         for state, action, reward, next_state in episode:
             if state not in temp_states_space.keys():
                 temp_states_space[state] = states_model_space_dim 
-                temp_value_function[states_model_space_dim] = np.zeros(len(ACTION_LIST)) # init value function
+                temp_value_function[states_model_space_dim] = np.zeros(N_ACTIONS) # init value function
                 states_model_space_dim += 1
 
         # initialize transition probability matrix 
-        q = np.zeros((states_model_space_dim, len(ACTION_LIST)))
+        q = np.zeros((states_model_space_dim, N_ACTIONS))
         q[:p.shape[0], :] = p
         q_weights = q.copy() # init transition probability weights
-        mask = np.zeros((states_model_space_dim, len(ACTION_LIST))) # bool: possible actions from each state
+        mask = np.zeros((states_model_space_dim, N_ACTIONS)) # bool: possible actions from each state
         
         # update transition probability weights using actor-critic with TD(0) learning
         for state, action, reward, next_state in episode:
@@ -327,8 +238,7 @@ class PAL():
             temp_value_function[temp_states_space[state]][action] += self.alpha * td_error
 
             # update transition probability matrix
-            gradient = softmax_gradient(policy=q_weights[temp_states_space[state], :], action=action, 
-                temperature=self.temperature)
+            gradient = softmax_gradient(policy=q_weights[temp_states_space[state], :], action=action)
             q_weights[temp_states_space[state], :] += temp_value_function[temp_states_space[state]] * gradient
 
             # update mask
@@ -343,15 +253,15 @@ class PAL():
         return q, temp_states_space, temp_reward_function, temp_next_state_function, temp_value_function
     
     ###### policy improvement ######
-    def __improve_policy_from_episode(self, episode, advantages_model, states_space_model):
+    def improve_policy_from_episode(self, episode, advantages_model, states_space_model):
         temp_policy = self.policy_agent.policy.copy()
         temp_states_space_policy = self.policy_agent.states_space.copy()
         previous_action = self.policy_agent.fittizial_first_action
-        advantages_policy = np.zeros((len(temp_states_space_policy), len(ACTION_LIST))) # cumulative temporal difference error
+        advantages_policy = np.zeros((len(temp_states_space_policy), N_ACTIONS)) # cumulative temporal difference error
             
         for state, action, reward, next_state in episode:
             # transition probability matrix of the environment
-            temp_policy, temp_states_space_policy, advantages_policy = self.__update_policy(state, 
+            temp_policy, temp_states_space_policy, advantages_policy = self.update_policy(state, 
                 temp_policy, temp_states_space_policy, action, previous_action, 
                 advantages_model, states_space_model, advantages_policy)
             
@@ -370,7 +280,7 @@ class PAL():
 
         return temp_policy, temp_states_space_policy, advantages_policy
     
-    def __update_policy(self, state, policy:list, states_space_policy:dict, action:int, previous_action:int,
+    def update_policy(self, state, policy:list, states_space_policy:dict, action:int, previous_action:int,
         advantages_model:list, states_space_model:dict, advantages_policy:np.ndarray):
 
         state_not_walls = self.policy_agent.compute_walls_from_transition_matrix(
@@ -393,12 +303,12 @@ class PAL():
             policy.append(policy)
             
             # update advantages vector
-            advantages_policy = np.concatenate((advantages_policy, np.zeros(len(ACTION_LIST))))
+            advantages_policy = np.concatenate((advantages_policy, np.zeros(N_ACTIONS)))
 
         # policy improvement using actor-critic
         action_agent_pov = ACTIONS_MAP[previous_action][action]
         gradient = softmax_gradient(policy=policy[state_not_walls_index[0]], 
-            action=action_agent_pov, temperature=self.temperature)
+            action=action_agent_pov)
         gradient = np.multiply(gradient, state_not_walls)
         # stochastic gradient ascent
         policy[state_not_walls_index[0]] += self.lr * gradient * advantages_model[
@@ -409,16 +319,3 @@ class PAL():
             states_space_model[state]][WALLS_MAP[previous_action]]
 
         return policy, states_space_policy, advantages_policy
-
-    ###### stopping criteria ######
-    def __check_stackelberg_nash_equilibrium(self):
-        # compute stackelberg nash equilibrium
-        # return True if the policy is at nash equilibrium, False otherwise
-        # verify if I'm in a equilbrium, knowing all possible transition distribuition from the model and the policy
-
-        equilibria = np.where(stackelberg_nash_equilibrium(
-            leader_payoffs=[-kl_div for kl_div in self.kl_divergence],
-            follower_payoffs=self.cost_function
-            ) != 0)
-
-        return self.optimal_model in equilibria

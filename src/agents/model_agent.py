@@ -13,15 +13,20 @@ class ModelAgent(Agent):
         # initialize model
         self.gamma = gamma # discount factor
         self.agent_state = 0 # initial state
+        
         self.transition_distribuition = [] # P(A|S) transition_distribuition[state] = probability distribution over actions
         self.__update_actions_distribuition(transition_matrix_initial_state)
+
         self.next_state_function = dict()
         self.reward_function = dict()
         self.states_space = dict() # S: {(x,y): state number}
         self.values_function = dict() # V: {state: value np.darray}
         self.__update_states_space(initial_state_coord)
+
+        self.quality_function = dict() # Q: {state: quality np.darray}
+        self.quality_function[initial_state_coord] = np.zeros(N_ACTIONS) 
     
-    def step(self, action, reward, next_state_coord): #TODO: togliere se non viene usato
+    def step(self, action, reward, next_state_coord):
         self.__update_states_space(state_coord=next_state_coord)
         next_state = self.states_space[next_state_coord]
 

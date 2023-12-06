@@ -14,7 +14,7 @@ class Environment(MatrixMDPEnv):
     
     def __init__(self, maze_width, maze_height, block_pixel_size=None):
         # initializa maze
-        print('Initialize maze')
+        print('\nInitialize maze')
         self.maze_environment = Maze(size_x=int(maze_width/2), size_y=int(maze_height/2))
         
         # maze parameters

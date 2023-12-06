@@ -1,0 +1,130 @@
+Initialize maze
+Maze created
+Maze size: 101x51
+Compute initial and terminal state
+Initial state: (99, 1)
+Compute prior and transitional distribuitions
+Compute reward function
+Environment created
+Agents initialized
+Training started
+
+Training on environment 1/10
+
+Iteration 1/10 for environment 1
+Policy optimized
+Terminal state reached
+Collected 10 episodes
+Model optimized
+Stackelberg-Nash equilibrium reached
+Reset environment and initialize a new one
+Initialize maze
+Maze created
+Maze size: 101x51
+Compute initial and terminal state
+Initial state: (1, 49)
+Compute prior and transitional distribuitions
+Compute reward function
+Environment created
+
+Training on environment 2/10
+
+Iteration 1/10 for environment 2
+Policy optimized
+Collected 10 episodes
+Model optimized
+Stackelberg-Nash equilibrium reached
+Reset environment and initialize a new one
+Initialize maze
+Maze created
+Maze size: 101x51
+Compute initial and terminal state
+Initial state: (99, 49)
+Compute prior and transitional distribuitions
+Compute reward function
+Environment created
+
+Training on environment 3/10
+
+Iteration 1/10 for environment 3
+Policy optimized
+Collected 10 episodes
+Model optimized
+Stackelberg-Nash equilibrium reached
+Reset environment and initialize a new one
+Initialize maze
+Maze created
+Maze size: 101x51
+Compute initial and terminal state
+Initial state: (99, 49)
+Compute prior and transitional distribuitions
+Compute reward function
+Environment created
+
+Training on environment 4/10
+
+Iteration 1/10 for environment 4
+Policy optimized
+Collected 10 episodes
+Model optimized
+Stackelberg-Nash equilibrium reached
+Reset environment and initialize a new one
+Initialize maze
+Maze created
+Maze size: 101x51
+Compute initial and terminal state
+Initial state: (1, 49)
+Compute prior and transitional distribuitions
+Compute reward function
+Environment created
+
+Training on environment 5/10
+
+Iteration 1/10 for environment 5
+Policy optimized
+Collected 10 episodes
+Model optimized
+Stackelberg-Nash equilibrium reached
+Reset environment and initialize a new one
+Initialize maze
+Maze created
+Maze size: 101x51
+Compute initial and terminal state
+Initial state: (1, 1)
+Compute prior and transitional distribuitions
+Compute reward function
+Environment created
+
+Training on environment 6/10
+
+Iteration 1/10 for environment 6
+Policy optimized
+Collected 10 episodes
+Model optimized
+Stackelberg-Nash equilibrium reached
+Reset environment and initialize a new one
+Initialize maze
+Maze created
+Maze size: 101x51
+Compute initial and terminal state
+Initial state: (1, 49)
+Compute prior and transitional distribuitions
+Compute reward function
+Environment created
+
+Training on environment 7/10
+
+Iteration 1/10 for environment 7
+Policy optimized
+Collected 10 episodes
+Model optimized
+Stackelberg-Nash equilibrium reached
+Reset environment and initialize a new one
+Initialize maze
+Maze created
+Maze size: 101x51
+Compute initial and terminal state
+Initial state: (1, 1)
+Compute prior and transitional distribuitions
+Compute reward function
+Environment created
