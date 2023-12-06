@@ -64,14 +64,14 @@ class MAL(MazeSolver):
             model_loss_list = []
             optimal_model = -1
 
-            for i, episode in enumerate(data_buffer):
+            for j, episode in enumerate(data_buffer):
                 quality_function = self.improve_model(episode=episode)
                 local_model_loss = self.compute_model_loss(quality_function=quality_function)
 
                 if local_model_loss < model_loss:
                     model_loss = local_model_loss
                     optimal_quality_function = quality_function
-                    optimal_model = i
+                    optimal_model = j
 
                 model_loss_list.append(-local_model_loss)
             self.model_agent.quality_function = optimal_quality_function
@@ -80,9 +80,8 @@ class MAL(MazeSolver):
             print('Model optimized')
 
             # stopping criterion
-            if check_stackelberg_nash_equilibrium(leader_payoffs=model_loss_list, 
-                follower_payoffs=[policy_cost_function], equilibrium_find=(optimal_model, 0)):
-                print('Stackelberg-Nash equilibrium reached')
+            if i == 0:
+                print('First iteration, no stopping criterion')
                 metrics_dict = {
                     'algorithm': 'MAL',
                     'environment_number': environment_number,
@@ -90,25 +89,40 @@ class MAL(MazeSolver):
                     'mse': model_loss_list,
                     'cost_function': policy_cost_function,
                     'best_model': optimal_model,
-                    'nash_equilibrium_found': True,
+                    'nash_equilibrium_found': None,
                     }
                 save_metrics(metrics_dict, model_values_function=self.model_agent.quality_function, 
                     environment_number=environment_number, iteration_number=i+1, algorithm='MAL')
-                break
             else:
-                print('Stackelberg-Nash equilibrium not reached')
-                metrics_dict = {
-                    'algorithm': 'MAL',
-                    'environment_number': environment_number,
-                    'iteration_number': i+1,
-                    'mse': model_loss_list,
-                    'cost_function': policy_cost_function,
-                    'best_model': optimal_model,
-                    'nash_equilibrium_found': False,
-                    }
-                save_metrics(metrics_dict, model_values_function=self.model_agent.quality_function, 
-                    environment_number=environment_number, iteration_number=i+1, algorithm='MAL')
-    
+                if check_stackelberg_nash_equilibrium(leader_payoffs=model_loss_list, 
+                    follower_payoffs=[policy_cost_function], equilibrium_find=(optimal_model, 0)):
+                    print('Stackelberg-Nash equilibrium reached')
+                    metrics_dict = {
+                        'algorithm': 'MAL',
+                        'environment_number': environment_number,
+                        'iteration_number': i+1,
+                        'mse': model_loss_list,
+                        'cost_function': policy_cost_function,
+                        'best_model': optimal_model,
+                        'nash_equilibrium_found': True,
+                        }
+                    save_metrics(metrics_dict, model_values_function=self.model_agent.quality_function, 
+                        environment_number=environment_number, iteration_number=i+1, algorithm='MAL')
+                    break
+                else:
+                    print('Stackelberg-Nash equilibrium not reached')
+                    metrics_dict = {
+                        'algorithm': 'MAL',
+                        'environment_number': environment_number,
+                        'iteration_number': i+1,
+                        'mse': model_loss_list,
+                        'cost_function': policy_cost_function,
+                        'best_model': optimal_model,
+                        'nash_equilibrium_found': False,
+                        }
+                    save_metrics(metrics_dict, model_values_function=self.model_agent.quality_function, 
+                        environment_number=environment_number, iteration_number=i+1, algorithm='MAL')
+        
     ###### policy optimization ######
     def optimize_policy(self):
         """
@@ -224,7 +238,7 @@ class MAL(MazeSolver):
     
     def compute_model_loss(self, quality_function):
         def mse(y_true, y_pred):
-            return np.mean(np.power(y_true - y_pred, 2))
+            return np.mean(np.power(y_true - y_pred, 2)) #FIXME: Pperands could not be broadcast together with shapes (593,4) (590,4) 
         
         return mse(np.concatenate((np.array(list(self.model_agent.quality_function.values())),                
             np.zeros((len(quality_function)-len(self.model_agent.quality_function), N_ACTIONS))), axis=0),
