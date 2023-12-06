@@ -1,6 +1,6 @@
 import numpy as np
 from src.algorithms.maze_solver import MazeSolver
-from src.algorithms.utils import save_metrics, save_policy, check_stackelberg_nash_equilibrium_MAL
+from src.algorithms.utils import save_metrics, save_policy, check_stackelberg_nash_equilibrium
 
 N_ACTIONS = 4
 ACTION_LIST = [0, 1, 2, 3] # [up, down, left, right]
@@ -80,9 +80,8 @@ class MAL(MazeSolver):
             print('Model optimized')
 
             # stopping criterion
-            follower_payoffs = policy_cost_function * np.ones(len(model_loss_list))
-            if check_stackelberg_nash_equilibrium_MAL(leader_payoffs=model_loss_list, 
-                follower_payoffs=follower_payoffs, target_value=optimal_model):
+            if check_stackelberg_nash_equilibrium(leader_payoffs=model_loss_list, 
+                follower_payoffs=[policy_cost_function], equilibrium_find=(optimal_model, 0)):
                 print('Stackelberg-Nash equilibrium reached')
                 metrics_dict = {
                     'algorithm': 'MAL',

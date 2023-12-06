@@ -1,6 +1,6 @@
 import numpy as np
 from src.algorithms.maze_solver import MazeSolver
-from src.algorithms.utils import softmax_gradient, softmax, check_stackelberg_nash_equilibrium_PAL, \
+from src.algorithms.utils import softmax_gradient, softmax, check_stackelberg_nash_equilibrium, \
     compute_model_loss, compute_actor_critic_objective, save_metrics, save_policy
 
 N_ACTIONS = 4
@@ -84,9 +84,9 @@ class PAL(MazeSolver):
             print(f'Policy improved: cost function = {self.cost_function[self.optimal_model]}')
 
             # stopping criteria: stop in nash equilibrium
-            if check_stackelberg_nash_equilibrium_PAL(leader_payoffs=self.kl_divergence,
-                follower_payoffs=self.cost_function, leader_target_value=self.optimal_policy_agent, 
-                follower_target_value=self.optimal_model):
+            if check_stackelberg_nash_equilibrium(leader_payoffs=self.kl_divergence,
+                follower_payoffs=self.cost_function, equilibrium_find=(
+                self.optimal_policy_agent,self.optimal_model)):
                 nash_equilibrium_found = True
                 print(f'\nStackelberg nash equilibrium reached after {i+1} iterations \n')
                 metrics_dict = {
