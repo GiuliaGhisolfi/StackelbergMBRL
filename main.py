@@ -29,7 +29,7 @@ if __name__ == '__main__':
 
     # agent parameters
     gamma = 0.9 # discount factor to compute expected cumulative reward
-    algorithm = 'PAL' # 'PAL' or 'MAL' or 'baseline'
+    algorithm = 'MAL' # 'PAL' or 'MAL' or 'baseline'
 
     # PAL agent parameters
     alpha = 0.01 # learning rate for policy improvment
@@ -52,6 +52,6 @@ if __name__ == '__main__':
         beta=beta,
         render=render,
         render_wait=render_wait,
-        policy_path='training_parameters/PAL/policy/policy_env_49.json', 
-        states_space_path='training_parameters/PAL/policy/states_space_env_49.json'
+        policy_path='training_parameters/PAL/policy/policy_env_0.json', 
+        states_space_path='training_parameters/PAL/policy/states_space_env_0.json'
     )

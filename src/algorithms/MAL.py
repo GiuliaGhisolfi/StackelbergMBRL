@@ -44,9 +44,8 @@ class MAL(MazeSolver):
             self.train_loop_for_the_environment(environment_number=i+1)
 
             # checkpoint: save policy, policy states space and metrics in json file
-            if i%5 == 0 or i == self.n_environments - 1:
-                save_policy(policy=self.policy_agent.policy, states_space=self.policy_agent.states_space, 
-                    algorithm='MAL', environment_number=i)
+            save_policy(policy=self.policy_agent.policy, states_space=self.policy_agent.states_space, 
+                algorithm='MAL', environment_number=i)
 
             if i < self.n_environments - 1:
                 # reset and initialize new environment and model agent
