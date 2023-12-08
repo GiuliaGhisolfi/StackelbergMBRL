@@ -95,8 +95,11 @@ class MBRLMazeSolver():
             )
             
             # render environment and agent
-            if self.render_bool:
+            if self.agent.agent_state_coord == self.env.terminal_state_coord:
+                self.render(2000)
+            elif self.render_bool:
                 self.render(self.render_wait)
+            
             
             if self.agent.agent_state_coord == self.env.terminal_state_coord:
                 print('Agent reached terminal state in {} steps'.format(epoch))

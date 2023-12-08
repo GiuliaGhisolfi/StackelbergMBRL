@@ -22,8 +22,8 @@ def main(maze_width, maze_height, max_epochs, algorithm, n_episodes_per_iteratio
 
 if __name__ == '__main__':
     # maze parameters
-    maze_width = 17
-    maze_height = 9
+    maze_width = 53
+    maze_height = 37
     render = True
     render_wait = 0 # time to wait between frames in ms
 
@@ -38,7 +38,7 @@ if __name__ == '__main__':
     beta = 0.01 # learning rate for model update
 
     # training parameters
-    max_epochs = 6000
+    max_epochs = 20000
     n_episodes_per_iteration = 20 # number of episodes to run for each epoch
 
 
@@ -52,6 +52,6 @@ if __name__ == '__main__':
         beta=beta,
         render=render,
         render_wait=render_wait,
-        policy_path='training_parameters/MAL/policy/policy_env_9.json', 
-        states_space_path='training_parameters/MAL/policy/states_space_env_9.json'
+        policy_path='training_parameters/PAL/policy/policy_env_40.json', 
+        states_space_path='training_parameters/PAL/policy/states_space_env_40.json'
     )
