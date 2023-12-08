@@ -95,7 +95,7 @@ def check_stackelberg_nash_equilibrium(leader_payoffs, follower_payoffs, equilib
 ###### SAVE AND LOAD FUNCTIONS ######
 def save_parameters(parameters_dict:dict, algorithm:str):
     # save parameters in json file
-    with open(f'parameters/{algorithm}_parameters.json', 'w') as parameters_file:
+    with open(f'training_parameters/{algorithm}_parameters.json', 'w') as parameters_file:
         json.dump(parameters_dict, parameters_file)
     
 def save_policy(policy, states_space, algorithm, environment_number):
