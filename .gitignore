@@ -4,3 +4,5 @@ src/algorithms/__pycache__
 src/agents/__pycache__
 src/environment/__pycache__
 dummy.ipynb
+train.ipynb
+plot.ipynb
