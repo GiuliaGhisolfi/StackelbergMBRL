@@ -2,7 +2,7 @@ from src.algorithms.MAL import MAL
 from src.algorithms.PAL import PAL
 
 def main(algorithm, learning_rate, n_environments, max_iterations_per_environment, n_episodes_per_iteration, 
-    max_epochs_per_episode, maze_width, maze_height, alpha, gamma, epsilon):
+    max_epochs_per_episode, maze_width, maze_height, alpha, gamma, epsilon, verbose):
     if algorithm == 'MAL':
         alg = MAL(
             learning_rate=learning_rate, 
@@ -14,7 +14,8 @@ def main(algorithm, learning_rate, n_environments, max_iterations_per_environmen
             maze_height=maze_height, 
             alpha = alpha,
             gamma=gamma,
-            epsilon=epsilon
+            epsilon=epsilon,
+            verbose=verbose
             )
     elif algorithm == 'PAL':
         alg = PAL(
@@ -27,7 +28,8 @@ def main(algorithm, learning_rate, n_environments, max_iterations_per_environmen
             maze_height=maze_height, 
             alpha = alpha,
             gamma=gamma,
-            epsilon=epsilon
+            epsilon=epsilon,
+            verbose=verbose
             )
     
     alg.train()
@@ -45,7 +47,7 @@ if __name__ == '__main__':
     alpha = 0.01 # learning rate for policy improvment
 
     # training parameters
-    n_environments = 30 # number of different environments to train on
+    n_environments = 2 # number of different environments to train on
     max_iterations_per_environment = 10
     n_episodes_per_iteration = 3 # number of episodes to run for each epoch
     max_epochs_per_episode = 60#00
@@ -64,5 +66,6 @@ if __name__ == '__main__':
         maze_height=maze_height, 
         alpha=alpha,
         gamma=gamma,
-        epsilon=epsilon
+        epsilon=epsilon,
+        verbose=False
     )

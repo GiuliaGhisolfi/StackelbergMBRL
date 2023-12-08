@@ -12,9 +12,11 @@ SCREEN_HEIGHT = 600
 
 class Environment(MatrixMDPEnv):
     
-    def __init__(self, maze_width, maze_height, block_pixel_size=None):
+    def __init__(self, maze_width, maze_height, block_pixel_size=None, verbose=False):
+        self.verbose = verbose
         # initializa maze
-        print('\nInitialize maze')
+        if self.verbose:
+            print('\nInitialize maze')
         self.maze_environment = Maze(size_x=int(maze_width/2), size_y=int(maze_height/2))
         
         # maze parameters
@@ -22,8 +24,9 @@ class Environment(MatrixMDPEnv):
         self.maze_height = int(maze_height/2) * 2 + 1
         self.maze = self.maze_environment.blocks
         self.flatten_maze = self.maze_environment.blocks.flatten().reshape(1, -1)
-        print('Maze created')
-        print('Maze size: {}x{}'.format(self.maze_width, self.maze_height))
+        if self.verbose:
+            print('Maze created')
+            print('Maze size: {}x{}'.format(self.maze_width, self.maze_height))
 
         # set block pixel size
         if block_pixel_size is None:
@@ -37,22 +40,27 @@ class Environment(MatrixMDPEnv):
         self.window = None
 
         # initialize initial and terminal state
-        print('Compute initial and terminal state')
+        if self.verbose:
+            print('Compute initial and terminal state')
         self.compute_terminal_states()
         self.__compute_initial_states()
-        print('Initial state: {}'.format(self.initial_state_coord))
+        if self.verbose:
+            print('Initial state: {}'.format(self.initial_state_coord))
 
         # compute prior and transitional distribuitions
-        print('Compute prior and transitional distribuitions')
+        if self.verbose:
+            print('Compute prior and transitional distribuitions')
         self.__compute_prior_distribuitions()
         self.__compute_transition_distribuition()
 
         # compute reward function
-        print('Compute reward function')
+        if self.verbose:
+            print('Compute reward function')
         self.__compute_reward_function()
 
         super().__init__(p_0=self.p_0, p=self.p, r=self.r, render_mode='human')
-        print('Environment created')
+        if self.verbose:
+            print('Environment created')
     
     def __compute_initial_states(self):
         self.terminal_state_coord = self.coordinates_from_state(self.terminal_state)
@@ -147,8 +155,10 @@ class Environment(MatrixMDPEnv):
 
     def reset_environment(self):
         # reset environment
-        print('Reset environment and initialize a new one')
-        self.__init__(maze_width=self.maze_width, maze_height=self.maze_height, block_pixel_size=self.block_pixel_size)
+        if self.verbose:
+            print('Reset environment and initialize a new one')
+        self.__init__(maze_width=self.maze_width, maze_height=self.maze_height, 
+            block_pixel_size=self.block_pixel_size, verbose=self.verbose)
     
     def display_maze(self):
         plt.figure(figsize=(10, 10))

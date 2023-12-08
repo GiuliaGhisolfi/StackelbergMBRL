@@ -1,6 +1,7 @@
 import numpy as np
 import copy
 import random
+import time
 from src.algorithms.maze_solver import MazeSolver
 from src.algorithms.utils import save_metrics, save_policy, check_stackelberg_nash_equilibrium
 
@@ -25,16 +26,18 @@ class MAL(MazeSolver):
     # MAL: Model As Leader Algorithm
 
     def __init__(self, learning_rate, n_environments, max_iterations_per_environment, n_episodes_per_iteration, 
-        max_epochs_per_episode, maze_width, maze_height, alpha, gamma, epsilon):
+        max_epochs_per_episode, maze_width, maze_height, alpha, gamma, epsilon, verbose):
 
         super().__init__(algorithm='MAL', learning_rate=learning_rate, n_environments=n_environments, 
             max_iterations_per_environment=max_iterations_per_environment, n_episodes_per_iteration=n_episodes_per_iteration, 
             max_epochs_per_episode=max_epochs_per_episode, maze_width=maze_width, maze_height=maze_height, 
-            alpha=alpha, gamma=gamma, epsilon=epsilon)
+            alpha=alpha, gamma=gamma, epsilon=epsilon, verbose=verbose)
+        self.verbose = verbose
     
     def train(self):
         # train loop over n_environments environments
         print('Training started')
+        start_time = time.time()
         for i in range(self.n_environments):
             print(f'\nTraining on environment {i+1}/{self.n_environments}')
             # train loop for the environment
@@ -55,13 +58,15 @@ class MAL(MazeSolver):
                 # reset policy agent at initial state
                 self.policy_agent.reset_at_initial_state(
                     transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :])
+        print(f'End training after {time.time() - start_time} seconds')
     
     def train_loop_for_the_environment(self, environment_number):
         # train loop for the environment
         model_losses = []
         policy_cost_functions = []
         for i in range(self.max_iterations_per_environment):
-            print(f'\nIteration {i+1}/{self.max_iterations_per_environment} for environment {environment_number}')
+            if self.verbose:
+                print(f'\nIteration {i+1}/{self.max_iterations_per_environment} for environment {environment_number}')
 
             # optmize policy
             if (len(self.model_agent.quality_function) > 1 or 
@@ -70,7 +75,8 @@ class MAL(MazeSolver):
                 self.policy_agent.policy = policy
             else:
                 policy_cost_function = 0
-            print('Policy optimized')
+            if self.verbose:
+                print('Policy optimized')
 
             # collect data executing policy in the environment
             data_buffer = [] # list of episodes, episode: list of tuples (state, action, reward, next_state)
@@ -78,7 +84,8 @@ class MAL(MazeSolver):
                 episode = self.executing_policy()
                 data_buffer.append(episode)
                 self.reset_at_initial_state() # reset environment and agent state
-            print(f'Collected {len(data_buffer)} episodes')
+            if self.verbose:
+                print(f'Collected {len(data_buffer)} episodes')
 
             # improve model
             model_loss = np.inf
@@ -104,18 +111,22 @@ class MAL(MazeSolver):
 
             self.policy_agent.quality_function = self.compute_quality_function_policy(
                 quality_function=optimal_quality_function)
-            print('Model improved')
+            if self.verbose:
+                print('Model improved')
 
             # stopping criterion
             if i < 5:
-                print('No stopping criterion')
+                if self.verbose:
+                    print('No stopping criterion')
             else:
                 if check_stackelberg_nash_equilibrium(leader_payoffs=model_loss_list, 
                     follower_payoffs=[policy_cost_function], equilibrium_find=(optimal_model, 0)):
-                    print('Stackelberg-Nash equilibrium reached')
+                    if self.verbose:
+                        print('Stackelberg-Nash equilibrium reached')
                     break
                 else:
-                    print('Stackelberg-Nash equilibrium not reached')
+                    if self.verbose:
+                        print('Stackelberg-Nash equilibrium not reached')
             
             model_losses.append(model_loss_list[optimal_model])
             policy_cost_functions.append(policy_cost_function)
