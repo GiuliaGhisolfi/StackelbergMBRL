@@ -36,7 +36,7 @@ def main(algorithm, learning_rate, n_environments, max_iterations_per_environmen
 
 
 if __name__ == '__main__':
-    algorithm = 'PAL' # 'PAL' or 'MAL'
+    algorithm = 'MAL' # 'PAL' or 'MAL'
 
     # maze parameters
     maze_width = 101
@@ -47,7 +47,7 @@ if __name__ == '__main__':
     alpha = 0.01 # learning rate for policy improvment
 
     # training parameters
-    n_environments = 50 # number of different environments to train on
+    n_environments = 5 # number of different environments to train on
     max_iterations_per_environment = 10
     n_episodes_per_iteration = 3 # number of episodes to run for each epoch
     max_epochs_per_episode = 600

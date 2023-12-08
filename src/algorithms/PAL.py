@@ -269,7 +269,10 @@ class PAL(MazeSolver):
             # update states space and model's parameters
             self.update_states_space(state_coord=state, previous_action=previous_action)
             next_state_function[(state, action)] = next_state
-            reward_function[(state, action)] = reward
+            if (state, action) not in reward_function.keys():
+                reward_function[(state, action)] = reward
+            else:
+                reward_function[(state, action)] += reward
 
             if next_state not in quality_function.keys():
                 # initialize quality function at next state

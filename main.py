@@ -52,6 +52,6 @@ if __name__ == '__main__':
         beta=beta,
         render=render,
         render_wait=render_wait,
-        policy_path='training_parameters/PAL/policy/policy_env_35.json', 
-        states_space_path='training_parameters/PAL/policy/states_space_env_35.json'
+        policy_path='training_parameters/PAL/policy/policy_env_49.json', 
+        states_space_path='training_parameters/PAL/policy/states_space_env_49.json'
     )

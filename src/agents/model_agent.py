@@ -15,7 +15,7 @@ class ModelAgent(Agent):
         self.agent_state = 0 # initial state
         
         self.transition_distribuition = [] # P(A|S) transition_distribuition[state] = probability distribution over actions
-        self.update_transition_distribuition(transition_matrix_initial_state)
+        #self.update_transition_distribuition(transition_matrix_initial_state)
 
         self.next_state_function = dict()
         self.reward_function = dict()
@@ -61,5 +61,6 @@ class ModelAgent(Agent):
     def update_states_space(self, state_coord):
         # state_coord from environment: (x,y) -> state in S
         if state_coord not in self.states_space.keys():
-            self.states_space[state_coord] = self.agent_state
-            self.values_function[self.agent_state] = np.zeros(N_ACTIONS)
+            s = len(self.states_space)
+            self.states_space[state_coord] = s
+            self.values_function[s] = np.zeros(N_ACTIONS)

@@ -196,14 +196,18 @@ class MAL(MazeSolver):
                 self.gamma * np.max(quality_function_policy[next_state]) - quality_function_policy[state][action])
         
         # compute policy from policy parameters
-        policy = softmax(quality_function_policy)
+        policy = softmax(np.array(list(quality_function_policy.values())))
         mask = np.array(list(self.policy_agent.states_space.values()))
         policy = policy * mask # remove walls from policy
         policy = policy / np.sum(policy, axis=1, keepdims=True) # normalize policy
+        policy = np.nan_to_num(policy) # 0/0 = 0
+        for i, row in enumerate(policy):
+            if sum(row) == 0:
+                policy[i] = (mask[i] / np.sum(mask[i])).astype(float)
+
         
         # compute cost function
-        value_function_last_state = np.sum(quality_function_policy[
-            self.map_state_model_to_policy[state, action]] * policy)
+        value_function_last_state = np.sum(quality_function_policy[state][action] * policy)
         cumulative_reward = self.compute_cumulative_reward(rewards)
         cost_function = cumulative_reward + value_function_last_state
 
@@ -253,23 +257,45 @@ class MAL(MazeSolver):
         reward_function = copy.deepcopy(self.model_agent.reward_function)
         previous_action = self.policy_agent.fittizial_first_action
         
+        # update state space
         for state, action, reward, next_state in episode:
             # update states space and model's parameters
             self.update_states_space(state_coord=state, previous_action=previous_action)
+            self.model_agent.update_states_space(state_coord=state)
             next_state_function[(state, action)] = next_state
-            reward_function[(state, action)] = reward
+            if (state, action) not in reward_function.keys():
+                reward_function[(state, action)] = reward
+            else:
+                reward_function[(state, action)] += reward
 
             if next_state not in quality_function.keys():
                 # initialize quality function at next state
                 quality_function[next_state] = np.zeros(N_ACTIONS)
-            
-            # transition probability update
-            delta_transition_probability = np.zeros((N_ACTIONS, N_ACTIONS))
-            
                         
             previous_action = action
 
         self.update_states_space(state_coord=next_state, previous_action=previous_action) # last state
+        self.model_agent.update_states_space(state_coord=next_state)
+        
+        # update transition probability
+        p = np.zeros((len(self.model_agent.states_space), N_ACTIONS))
+        for state, action, reward, next_state in episode:
+            p[self.model_agent.states_space[state], action] += 1
+        
+        p = p / np.sum(p, axis=1, keepdims=True) # normalize transition probability
+
+        # update quality function
+        for state in quality_function.keys():
+            for action in range(N_ACTIONS):
+                if (state, action) in reward_function.keys():
+                    r = reward_function[(state, action)]
+                else:
+                    r = 0
+                q_update = r + self.gamma * sum(p[self.model_agent.states_space[state], :
+                    ] * max(quality_function[state]))
+                q_array = quality_function[state]
+                q_array[action] = q_update
+                quality_function[state] = q_array
         
         return quality_function, next_state_function, reward_function
     
