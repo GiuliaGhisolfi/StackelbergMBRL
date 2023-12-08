@@ -1,1 +1,1 @@
-{"algorithm": "PAL", "environment_number": 4, "iteration_done": 3, "mse": [-0.00025523984026666667, -0.00011828452315200541, -0.00022077875814817394], "cost_function": [-46.679145783099145, -56.01980247044838, -30.485816187959696]}
+{"algorithm": "PAL", "environment_number": 4, "iteration_done": 0, "mse": [], "cost_function": []}

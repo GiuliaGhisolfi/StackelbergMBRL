@@ -83,7 +83,7 @@ class PAL(MazeSolver):
 
             policy_cost_function = -np.inf
             policy_cost_function_list = []
-            optimal_policy = -1
+            optimal_policy_agent = -1
 
             for j, episode in enumerate(data_buffer):
                 # optimize model
