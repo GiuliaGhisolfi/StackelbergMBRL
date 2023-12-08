@@ -1,1 +1,1 @@
-{"algorithm": "PAL", "n_environments": 2, "max_iterations_per_environment": 2, "n_episodes_per_iteration": 2, "max_epochs_per_episode": 600, "learning_rate": 0.1, "alpha": 0.01, "gamma": 0.995, "epsilon": 0.1}
+{"algorithm": "PAL", "n_environments": 30, "max_iterations_per_environment": 10, "n_episodes_per_iteration": 3, "max_epochs_per_episode": 60, "learning_rate": 0.1, "alpha": 0.01, "gamma": 0.995, "epsilon": 0.1}

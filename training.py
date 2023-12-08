@@ -34,7 +34,7 @@ def main(algorithm, learning_rate, n_environments, max_iterations_per_environmen
 
 
 if __name__ == '__main__':
-    algorithm = 'MAL' # 'PAL' or 'MAL'
+    algorithm = 'PAL' # 'PAL' or 'MAL'
 
     # maze parameters
     maze_width = 101

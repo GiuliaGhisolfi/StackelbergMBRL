@@ -1,1 +1,1 @@
-{"algorithm": "MAL", "environment_number": 25, "iteration_number": 1, "mse": [-0.0025536816309391524, -0.0010601262137738925, -0.0018608000179705696], "cost_function": 0, "best_model": 1, "nash_equilibrium_found": null}
+{"algorithm": "PAL", "environment_number": 25, "iteration_number": 1, "mse": [-0.001345304114405031, -0.0002794663219426289, -0.00043948782610881565], "cost_function": -117.82472512906324, "best_model": 1, "nash_equilibrium_found": null}

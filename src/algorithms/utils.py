@@ -100,19 +100,14 @@ def save_parameters(parameters_dict:dict, algorithm:str):
     
 def save_policy(policy, states_space, algorithm, environment_number):
     # save final policy and policy states space in json file
-    with open(f'training_parameters/{algorithm}/policy/policy_{environment_number}_env.json', 'w') as policy_file:
+    with open(f'training_parameters/{algorithm}/policy/policy_env_{environment_number}.json', 'w') as policy_file:
         json.dump([row.tolist() for row in policy], policy_file)
 
-    with open(f'training_parameters/{algorithm}/policy/states_space_{environment_number}_env.json', 
+    with open(f'training_parameters/{algorithm}/policy/states_space_env_{environment_number}_env.json', 
         'w') as states_space_file:
         json.dump({str(key): value.tolist() for key, value in states_space.items()}, states_space_file)
 
-def save_metrics(metrics_dict, model_values_function, environment_number, iteration_number, algorithm):
-    with open(f'training_parameters/{algorithm}/metrics/metrics_{environment_number}_env_{iteration_number}_iter.json', 
+def save_metrics(metrics_dict, environment_number, algorithm):
+    with open(f'training_parameters/{algorithm}/metrics/metrics_env_{environment_number}.json', 
         'w') as metrics_file:
         json.dump(metrics_dict, metrics_file)
-    
-    with open(
-        f'training_parameters/{algorithm}/values_function/values_function_{environment_number}_env_{iteration_number}_iter.json', 
-        'w') as value_function_file:
-        json.dump({str(key): value.tolist() for key, value in model_values_function.items()}, value_function_file)
