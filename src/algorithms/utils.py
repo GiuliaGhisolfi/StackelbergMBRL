@@ -103,7 +103,7 @@ def save_policy(policy, states_space, algorithm, environment_number):
     with open(f'training_parameters/{algorithm}/policy/policy_env_{environment_number}.json', 'w') as policy_file:
         json.dump([row.tolist() for row in policy], policy_file)
 
-    with open(f'training_parameters/{algorithm}/policy/states_space_env_{environment_number}_env.json', 
+    with open(f'training_parameters/{algorithm}/policy/states_space_env_{environment_number}.json', 
         'w') as states_space_file:
         json.dump({str(key): value.tolist() for key, value in states_space.items()}, states_space_file)
 
