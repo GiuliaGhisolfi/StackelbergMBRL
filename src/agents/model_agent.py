@@ -15,7 +15,6 @@ class ModelAgent(Agent):
         self.agent_state = 0 # initial state
         
         self.transition_distribuition = [] # P(A|S) transition_distribuition[state] = probability distribution over actions
-        #self.update_transition_distribuition(transition_matrix_initial_state)
 
         self.next_state_function = dict()
         self.reward_function = dict()
@@ -41,14 +40,6 @@ class ModelAgent(Agent):
             initial_state_coord=initial_state_coord,
             transition_matrix_initial_state=transition_matrix_initial_state
         )
-    
-    def update_transition_distribuition(self, transition_matrix):
-        # P(A|S)
-        if self.agent_state not in range(len(self.transition_distribuition)):
-            self.transition_distribuition.append(np.array([0 if i not in np.where(
-                transition_matrix != 0)[1] else 1 for i in range(N_ACTIONS)], dtype=np.float64))
-            self.transition_distribuition[self.agent_state] /= np.sum(
-                self.transition_distribuition[self.agent_state])
 
     def update_next_state_function(self, state, action, next_state):
         # S, A -> S': deterministica
