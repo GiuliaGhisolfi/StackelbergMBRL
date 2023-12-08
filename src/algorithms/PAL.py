@@ -283,10 +283,13 @@ class PAL(MazeSolver):
                         
             previous_action = action
 
-            c = len(np.nonzero(np.array(list(quality_function.values()))))
-            d = len(reward_function)
-            e = len(next_state_function)
         self.update_states_space(state_coord=next_state, previous_action=previous_action) # last state
+        if (quality_function[next_state] == np.zeros(N_ACTIONS)).all():
+            action_map = {0: 1, 1: 0, 2: 3, 3: 2}
+            quality_function[next_state][action_map[previous_action]] = - self.alpha
+            reward_function[(next_state, action_map[previous_action])] = -1
+            next_state_function[(next_state, action_map[previous_action])] = state
+            self.map_state_model_to_policy[next_state, action_map[previous_action]] = state
         
         return quality_function, next_state_function, reward_function
     
