@@ -71,8 +71,9 @@ class MAL(MazeSolver):
             # optmize policy
             if (len(self.model_agent.quality_function) > 1 or 
             np.sum(list(self.model_agent.quality_function.values()))):
-                policy, policy_cost_function = self.optimize_policy()
+                policy, policy_cost_function, quality_function_policy = self.optimize_policy()
                 self.policy_agent.policy = policy
+                self.policy_agent.quality_function = quality_function_policy
             else:
                 policy_cost_function = 0
             if self.verbose:
@@ -93,7 +94,7 @@ class MAL(MazeSolver):
             optimal_model = -1
 
             for j, episode in enumerate(data_buffer):
-                quality_function, next_state_function, reward_function = self.improve_policy(episode=episode)
+                quality_function, next_state_function, reward_function = self.improve_model(episode=episode)
                 local_model_loss = self.compute_model_loss(quality_function=quality_function)
 
                 if local_model_loss < model_loss:
@@ -115,7 +116,7 @@ class MAL(MazeSolver):
                 print('Model improved')
 
             # stopping criterion
-            if i < 5:
+            if i == 0:
                 if self.verbose:
                     print('No stopping criterion')
             else:
@@ -148,10 +149,8 @@ class MAL(MazeSolver):
         """
         # compute policy from model's quality function
         policy = copy.deepcopy(self.policy_agent.policy)
-        quality_function = copy.deepcopy(self.model_agent.quality_function)
+        quality_function_policy = copy.deepcopy(self.policy_agent.quality_function)
 
-        # update policy maximaizing model reward
-        quality_function_policy = self.compute_quality_function_policy(quality_function)
         for state, not_walls in self.policy_agent.states_space.items():
             if np.sum(not_walls) > 1:
                 value = quality_function_policy[state]*not_walls
@@ -168,6 +167,7 @@ class MAL(MazeSolver):
         # execute policy in the model to collect reward
         rewards = []
         policy_states = []
+        actions = []
         state = random.choice(list(self.model_agent.quality_function)) # random initial state
         for previous_action in range(4):
             if (state, previous_action) in self.map_state_model_to_policy.keys():
@@ -179,6 +179,7 @@ class MAL(MazeSolver):
                 self.model_agent.quality_function[state] != 0)[0])
             rewards.append(self.model_agent.reward_function[(state, action)])
             policy_states.append(self.map_state_model_to_policy[state, previous_action])
+            actions.append(action)
             state = self.model_agent.next_state_function[(state, action)] # next state
 
             # stopping criteria
@@ -186,21 +187,16 @@ class MAL(MazeSolver):
                 break # terminal state reached
 
             previous_action = action
-        
-        # improve policy
+        policy_states.append(self.map_state_model_to_policy[state, previous_action])
 
-        # initalize policy parameters
-        theta = np.random.uniform(0, 1, size=(len(self.policy_agent.states_space), N_ACTIONS))
-
-        # reinforce Monte Carlo
-        for r in range(len(rewards)):
-            # policy paramether update
-            cumulative_reward = self.compute_cumulative_reward(rewards[r:])
-            gradient = softmax_prime(theta[policy_states[r]]) / softmax(theta[policy_states[r]])
-            theta[policy_states[r]] = theta[policy_states[r]] + self.alpha * cumulative_reward * gradient
+        # optimize policy
+        for state, action, reward, next_state in zip(policy_states, actions, rewards, policy_states[1:]):
+            # Q-Learning update
+            quality_function_policy[state][action] += self.alpha * (reward + 
+                self.gamma * np.max(quality_function_policy[next_state]) - quality_function_policy[state][action])
         
         # compute policy from policy parameters
-        policy = softmax(theta)
+        policy = softmax(quality_function_policy)
         mask = np.array(list(self.policy_agent.states_space.values()))
         policy = policy * mask # remove walls from policy
         policy = policy / np.sum(policy, axis=1, keepdims=True) # normalize policy
@@ -211,7 +207,7 @@ class MAL(MazeSolver):
         cumulative_reward = self.compute_cumulative_reward(rewards)
         cost_function = cumulative_reward + value_function_last_state
 
-        return policy, cost_function
+        return policy, cost_function, quality_function_policy
     
     def compute_cumulative_reward(self, rewards):
         T = len(rewards) # number of steps to reach terminal state from current state
@@ -241,7 +237,7 @@ class MAL(MazeSolver):
         return quality_function_policy
 
     ####### model improvement ######
-    def improve_policy(self, episode):
+    def improve_model(self, episode):
         """
         Improve model's parameters from experience using episode
 
@@ -267,9 +263,9 @@ class MAL(MazeSolver):
                 # initialize quality function at next state
                 quality_function[next_state] = np.zeros(N_ACTIONS)
             
-            # Q-Learning update
-            quality_function[state][action] += self.alpha * (reward + 
-                self.gamma * np.max(quality_function[next_state]) - quality_function[state][action])
+            # transition probability update
+            delta_transition_probability = np.zeros((N_ACTIONS, N_ACTIONS))
+            
                         
             previous_action = action
 

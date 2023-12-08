@@ -6,7 +6,7 @@ ACTIONS_LIST = [0, 1, 2, 3] # [up, down, left, right]
 
 
 class ModelAgent(Agent):
-    # ricreo environment con modello approssimato
+    # Model Agent: learns a model of the environment from experience
     def __init__(self, gamma, initial_state_coord, transition_matrix_initial_state):
         super().__init__(initial_state_coord=initial_state_coord)
 
@@ -15,19 +15,19 @@ class ModelAgent(Agent):
         self.agent_state = 0 # initial state
         
         self.transition_distribuition = [] # P(A|S) transition_distribuition[state] = probability distribution over actions
-        self.__update_actions_distribuition(transition_matrix_initial_state)
+        self.update_transition_distribuition(transition_matrix_initial_state)
 
         self.next_state_function = dict()
         self.reward_function = dict()
         self.states_space = dict() # S: {(x,y): state number}
         self.values_function = dict() # V: {state: value np.darray}
-        self.__update_states_space(initial_state_coord)
+        self.update_states_space(initial_state_coord)
 
         self.quality_function = dict() # Q: {state: quality np.darray}
         self.quality_function[initial_state_coord] = np.zeros(N_ACTIONS) 
     
     def step(self, action, reward, next_state_coord):
-        self.__update_states_space(state_coord=next_state_coord)
+        self.update_states_space(state_coord=next_state_coord)
         next_state = self.states_space[next_state_coord]
 
         self.update_next_state_function(state=self.agent_state, action=action, next_state=next_state)
@@ -42,7 +42,7 @@ class ModelAgent(Agent):
             transition_matrix_initial_state=transition_matrix_initial_state
         )
     
-    def __update_actions_distribuition(self, transition_matrix):
+    def update_transition_distribuition(self, transition_matrix):
         # P(A|S)
         if self.agent_state not in range(len(self.transition_distribuition)):
             self.transition_distribuition.append(np.array([0 if i not in np.where(
@@ -58,7 +58,7 @@ class ModelAgent(Agent):
         # S, A -> R
         self.reward_function[(state, action)] = reward
     
-    def __update_states_space(self, state_coord):
+    def update_states_space(self, state_coord):
         # state_coord from environment: (x,y) -> state in S
         if state_coord not in self.states_space.keys():
             self.states_space[state_coord] = self.agent_state
