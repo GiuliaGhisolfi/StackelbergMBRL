@@ -77,12 +77,17 @@ class PAL(MazeSolver):
             if self.verbose:
                 print(f'Collected {len(data_buffer)} episodes')
 
-            # optimize model
+            # optimize model and improve policy parameters
             model_loss = np.inf
             model_loss_list = []
             optimal_model = -1
 
+            policy_cost_function = -np.inf
+            policy_cost_function_list = []
+            optimal_policy = -1
+
             for j, episode in enumerate(data_buffer):
+                # optimize model
                 quality_function, next_state_function, reward_function = self.optimize_model(episode=episode)
                 local_model_loss = self.compute_model_loss(quality_function=quality_function)
 
@@ -95,41 +100,43 @@ class PAL(MazeSolver):
 
                 model_loss_list.append(-local_model_loss)
 
+                # improve policy
+                policy, local_policy_cost_function = self.improve_policy(
+                    model_agent_quality_function=quality_function, 
+                    model_agent_next_state_function=next_state_function, 
+                    model_agent_reward_function=reward_function)  
+                
+                if local_policy_cost_function > policy_cost_function:
+                    policy_cost_function = local_policy_cost_function
+                    optimal_policy = policy 
+                    optimal_policy_agent = j
+
+                policy_cost_function_list.append(local_policy_cost_function)
+
+            # update model and policy agent
             self.model_agent.quality_function = optimal_quality_function
             self.model_agent.next_state_function = optimal_next_state_function
             self.model_agent.reward_function = optimal_reward_function
 
+            self.policy_agent.policy = optimal_policy
+
             self.policy_agent.quality_function = self.compute_quality_function_policy(
                 quality_function=optimal_quality_function)
             if self.verbose:
-                print('Model optimized')
-
-            # improve policy
-            if (len(self.model_agent.quality_function) > 1 or 
-            np.sum(list(self.model_agent.quality_function.values()))):
-                policy, policy_cost_function = self.improve_policy()
-                self.policy_agent.policy = policy
-            else:
-                policy_cost_function = 0
-            if self.verbose:
-                print('Policy improved')
+                print('Model optimized and policy improved')
 
             # stopping criterion
-            if i < 5:
+            if check_stackelberg_nash_equilibrium(leader_payoffs=model_loss_list, 
+                follower_payoffs=policy_cost_function_list, equilibrium_find=(optimal_model, optimal_policy_agent)):
                 if self.verbose:
-                    print('No stopping criterion')
+                    print('Stackelberg-Nash equilibrium reached')
+                break
             else:
-                if check_stackelberg_nash_equilibrium(leader_payoffs=model_loss_list, 
-                    follower_payoffs=[policy_cost_function], equilibrium_find=(optimal_model, 0)):
-                    if self.verbose:
-                        print('Stackelberg-Nash equilibrium reached')
-                    break
-                else:
-                    if self.verbose:
-                        print('Stackelberg-Nash equilibrium not reached')
+                if self.verbose:
+                    print('Stackelberg-Nash equilibrium not reached')
             
             model_losses.append(model_loss_list[optimal_model])
-            policy_cost_functions.append(policy_cost_function)
+            policy_cost_functions.append(policy_cost_function_list[optimal_policy_agent])
         
         metrics_dict = {
             'algorithm': 'PAL',
@@ -141,14 +148,15 @@ class PAL(MazeSolver):
         save_metrics(metrics_dict, environment_number=environment_number, algorithm='PAL')
         
     ###### policy optimization ######
-    def improve_policy(self):
+    def improve_policy(self, model_agent_quality_function, model_agent_next_state_function, 
+        model_agent_reward_function):
         """
         Returns:
             policy (np.ndarray): policy to execute in the environment
         """
         # compute policy from model's quality function
         policy = copy.deepcopy(self.policy_agent.policy)
-        quality_function = copy.deepcopy(self.model_agent.quality_function)
+        quality_function = copy.deepcopy(model_agent_quality_function)
 
         # update policy maximaizing model reward
         quality_function_policy = self.compute_quality_function_policy(quality_function)
@@ -168,7 +176,7 @@ class PAL(MazeSolver):
         # execute policy in the model to collect reward
         rewards = []
         policy_states = []
-        state = random.choice(list(self.model_agent.quality_function)) # random initial state
+        state = random.choice(list(model_agent_quality_function)) # random initial state
         for previous_action in range(4):
             if (state, previous_action) in self.map_state_model_to_policy.keys():
                 break
@@ -176,13 +184,13 @@ class PAL(MazeSolver):
         for _ in range(int(self.max_epochs_per_episode/2)):
             # state, action, reward, next state
             action = np.random.choice(np.where(
-                self.model_agent.quality_function[state] != 0)[0])
-            rewards.append(self.model_agent.reward_function[(state, action)])
+                model_agent_quality_function[state] != 0)[0])
+            rewards.append(model_agent_reward_function[(state, action)])
             policy_states.append(self.map_state_model_to_policy[state, previous_action])
-            state = self.model_agent.next_state_function[(state, action)] # next state
+            state = model_agent_next_state_function[(state, action)] # next state
 
             # stopping criteria
-            if rewards[-1] == 0 or len(np.where(self.model_agent.quality_function[state] != 0)[0]) == 0:
+            if rewards[-1] == 0 or len(np.where(model_agent_quality_function[state] != 0)[0]) == 0:
                 break # terminal state reached
 
             previous_action = action

@@ -1,1 +1,1 @@
-# Maze Solving Algorithms via Stackelberg MBRL
+# Maze Solving Algorithms through Stackelberg Model-Based Reinforcement Learning

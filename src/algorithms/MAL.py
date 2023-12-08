@@ -273,9 +273,6 @@ class MAL(MazeSolver):
                         
             previous_action = action
 
-            c = len(np.nonzero(np.array(list(quality_function.values()))))
-            d = len(reward_function)
-            e = len(next_state_function)
         self.update_states_space(state_coord=next_state, previous_action=previous_action) # last state
         
         return quality_function, next_state_function, reward_function

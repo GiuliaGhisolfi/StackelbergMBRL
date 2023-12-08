@@ -67,5 +67,5 @@ if __name__ == '__main__':
         alpha=alpha,
         gamma=gamma,
         epsilon=epsilon,
-        verbose=False
+        verbose=True
     )
