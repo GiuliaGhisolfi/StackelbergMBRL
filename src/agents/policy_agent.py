@@ -16,7 +16,7 @@ class PolicyAgent():
         self.states_space = dict() # {state number: walls[-,-,-,-]}
 
         self.quality_function = dict() # Q := {state number: actions values (np.darray)}
-        self.quality_function[0] = np.zeros(N_ACTIONS) 
+        self.quality_function[0] = np.zeros(N_ACTIONS)
 
         self.gamma = gamma # discount factor
         self.compute_action_policy = compute_action_policy # epsilon_greedy or uniform_initialization

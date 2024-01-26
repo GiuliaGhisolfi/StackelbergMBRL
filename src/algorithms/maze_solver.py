@@ -2,7 +2,7 @@ import numpy as np
 from src.agents.model_agent import ModelAgent
 from src.agents.policy_agent import PolicyAgent
 from src.environment.environment import Environment
-from src.algorithms.utils import softmax_gradient, save_parameters
+from src.algorithms.utils import save_parameters
 
 
 ACTIONS_MAP = {
@@ -21,7 +21,7 @@ WALLS_MAP = {
 class MazeSolver():
     
     def __init__(self, algorithm, learning_rate, n_environments, max_iterations_per_environment, n_episodes_per_iteration, 
-        max_epochs_per_episode, maze_width, maze_height, alpha, gamma, epsilon):
+        max_epochs_per_episode, maze_width, maze_height, alpha, gamma, epsilon, verbose):
 
         self.algorithm = algorithm # 'PAL' or 'MAL'
         self.n_environments = n_environments
@@ -32,6 +32,7 @@ class MazeSolver():
         self.alpha = alpha # alpha, learning rate for value function update
         self.gamma = gamma # discount factor to compute expected cumulative reward
         self.epsilon = epsilon # epsilon greedy parameter
+        self.verbose = verbose
 
         parameters_dict = {
             'algorithm': self.algorithm,
@@ -49,7 +50,8 @@ class MazeSolver():
         # initalize environment
         self.env = Environment(
             maze_width=maze_width,
-            maze_height=maze_height
+            maze_height=maze_height,
+            verbose=self.verbose
             )
 
         # initialize model and policy agents
@@ -63,7 +65,8 @@ class MazeSolver():
             transition_matrix_initial_state=self.env.p[:, self.env.initial_state, :],          
             epsilon=epsilon
             )
-        print('Agents initialized')
+        if self.verbose:
+            print('Agents initialized')
         
         self.map_state_model_to_policy = dict() # map function := {(x,y): state_policy}
         self.map_state_model_to_policy[(self.env.initial_state_coord,
@@ -106,7 +109,8 @@ class MazeSolver():
             
             # check if terminal state is reached
             if current_state == self.env.terminal_state:
-                print(f'Terminal state reached after {len(episode)} steps')
+                if self.verbose:
+                    print(f'Terminal state reached after {len(episode)} steps')
                 break
             
         return episode
